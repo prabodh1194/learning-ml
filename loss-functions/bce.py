@@ -7,43 +7,47 @@ import mlx.core as mx
 import numpy as np
 import torch
 
-
-def forward(y_pred: np.ndarray | mx.array, targets: np.ndarray | mx.array) -> float:
-    l = (targets * np.log(y_pred) + (1 - targets) * np.log(1 - y_pred)).sum()
-    return -l / targets.size
+from base import LossFunction, test_loss
 
 
-def backward(
-    y_pred: np.ndarray | mx.array, targets: np.ndarray | mx.array
-) -> np.ndarray:
-    g = targets / y_pred - (1 - targets) / (1 - y_pred)
-    return -g / targets.size
+class BCE(LossFunction):
+    """Binary Cross Entropy loss."""
+
+    class np:
+        @staticmethod
+        def forward(predictions: np.ndarray, targets: np.ndarray) -> float:
+            l = (
+                targets * np.log(predictions) + (1 - targets) * np.log(1 - predictions)
+            ).sum()
+            return -l / targets.size
+
+        @staticmethod
+        def backward(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
+            g = targets / predictions - (1 - targets) / (1 - predictions)
+            return -g / targets.size
+
+    class mlx:
+        @staticmethod
+        def forward(predictions: mx.array, targets: mx.array) -> float:
+            l = (
+                targets * mx.log(predictions) + (1 - targets) * mx.log(1 - predictions)
+            ).sum()
+            return -l / targets.size
+
+        @staticmethod
+        def backward(predictions: mx.array, targets: mx.array) -> mx.array:
+            g = targets / predictions - (1 - targets) / (1 - predictions)
+            return -g / targets.size
+
+    class torch:
+        @staticmethod
+        def forward(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+            return torch.nn.functional.binary_cross_entropy(predictions, targets)
 
 
 if __name__ == "__main__":
-    y_pred_np = np.array([0.9, 0.2, 0.9])
-    targets_np = np.array([1.0, 1.0, 0.0])
-
-    loss_np = forward(y_pred_np, targets_np)
-    grad_np = backward(y_pred_np, targets_np)
-    print(f"numpy loss: {loss_np}")
-    print(f"numpy grad: {grad_np}")
-
-    loss_mlx = forward(mx.array(y_pred_np), mx.array(targets_np))
-    grad_mlx = backward(mx.array(y_pred_np), mx.array(targets_np))
-    print(f"mlx loss: {loss_mlx}")
-    print(f"mlx grad: {grad_mlx}")
-
-    y_pred_pt = torch.tensor(y_pred_np, requires_grad=True)
-    targets_pt = torch.tensor(targets_np)
-    loss_pt = torch.nn.functional.binary_cross_entropy(y_pred_pt, targets_pt)
-    loss_pt.backward()
-    print(f"torch loss: {y_pred_pt.grad}")
-
-    assert np.allclose(grad_np, y_pred_pt.grad.numpy()), "Gradient is not correct"
-    print("✓ NumPy gradients match PyTorch!")
-
-    assert np.allclose(
-        np.asarray(grad_mlx), y_pred_pt.grad.numpy()
-    ), "mlx Gradients don't match!"
-    print("✓ MLX gradients match PyTorch!")
+    test_loss(
+        BCE,
+        predictions=np.array([0.9, 0.2, 0.9]),
+        targets=np.array([1.0, 1.0, 0.0]),
+    )

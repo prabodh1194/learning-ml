@@ -9,67 +9,43 @@ s = raw score (not probability)
 
 import numpy as np
 import mlx.core as mx
-import torch.nn.functional
+import torch
+
+from base import LossFunction, test_loss
 
 
-def forward(
-    y: np.ndarray | mx.array, s: np.ndarray | mx.array
-) -> np.ndarray | mx.array:
-    return np.maximum(0, 1 - y * s).mean()
+class BinaryHingeLoss(LossFunction):
+    """Binary Hinge Loss."""
 
+    class np:
+        @staticmethod
+        def forward(predictions: np.ndarray, targets: np.ndarray) -> float:
+            return np.maximum(0, 1 - targets * predictions).mean()
 
-def backward(
-    y: np.ndarray | mx.array, s: np.ndarray | mx.array
-) -> np.ndarray | mx.array:
-    grad = -y
+        @staticmethod
+        def backward(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
+            grad = -targets
+            return (grad * ((1 - targets * predictions) > 0)) / targets.size
 
-    return (grad * ((1 - y * s) > 0)) / y.size
+    class mlx:
+        @staticmethod
+        def forward(predictions: mx.array, targets: mx.array) -> float:
+            return mx.maximum(0, 1 - targets * predictions).mean()
+
+        @staticmethod
+        def backward(predictions: mx.array, targets: mx.array) -> mx.array:
+            grad = -targets
+            return (grad * ((1 - targets * predictions) > 0)) / targets.size
+
+    class torch:
+        @staticmethod
+        def forward(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+            return torch.clamp(1 - targets * predictions, min=0).mean()
 
 
 if __name__ == "__main__":
-    y = np.array(
-        [
-            +1,  # Email 0: actually spam
-            -1,  # Email 1: actually not spam
-            +1,  # Email 2: actually spam
-            -1,  # Email 3: actually not spam
-        ]
+    test_loss(
+        BinaryHingeLoss,
+        predictions=np.array([+2.5, +0.3, -0.5, -1.8]),
+        targets=np.array([+1.0, -1.0, +1.0, -1.0]),
     )
-
-    s = np.array(
-        [
-            +2.5,  # Email 0: strongly predicts spam → CORRECT ✅
-            +0.3,  # Email 1: weakly predicts spam → WRONG ❌
-            -0.5,  # Email 2: predicts not spam → WRONG ❌
-            -1.8,  # Email 3: strongly predicts not spam → CORRECT ✅
-        ]
-    )
-
-    loss_np = forward(y, s)
-    grad_np = backward(y, s)
-
-    print("numpy loss: ", loss_np)
-    print("numpy grad: ", grad_np)
-
-    loss_mlx = forward(mx.array(y), mx.array(s))
-    grad_mlx = backward(mx.array(y), mx.array(s))
-
-    print("mlx loss: ", loss_mlx)
-    print("mlx grad: ", grad_mlx)
-
-    y_pt = torch.tensor(y)
-    s_pt = torch.tensor(s, requires_grad=True)
-
-    loss_pt = torch.clamp(1 - y_pt * s_pt, min=0).mean()
-    loss_pt.backward()
-
-    print("torch loss: ", loss_pt.item())
-    print("torch grad: ", s_pt.grad)
-
-    assert np.allclose(grad_np, s_pt.grad.numpy()), "gradient is not correct"
-    print("✓ NumPy gradients match PyTorch!")
-
-    assert np.allclose(
-        np.asarray(grad_mlx), s_pt.grad.numpy()
-    ), "mlx Gradients don't match!"
-    print("✓ MLX gradients match PyTorch!")
