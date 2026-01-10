@@ -12,5 +12,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "ipython>=9.9.0",
     "pillow>=12.1.0",
 ]
