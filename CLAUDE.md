@@ -1,0 +1,1 @@
+by default, always assign the clickup tasks to `me`
