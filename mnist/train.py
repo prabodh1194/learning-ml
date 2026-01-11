@@ -2,6 +2,8 @@
 mlp: input -> linear -> relu -> linear -> ce -> loss
 """
 
+import time
+
 import numpy as np
 
 from layers import linear as l, relu as r
@@ -60,14 +62,17 @@ if __name__ == "__main__":
         return (preds == y).mean() * 100
 
     # 2 hyperparameters
-    lr = .01
+    lr = 0.01
     epochs = int(1e3)
 
     for i in range(epochs):
+        t1 = time.time()
         loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)
         l1_grad, l2_grad = backward(_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe)
+        t2 = time.time()
 
-        print("epoch", i, "loss", loss)
+        if i % 10 == 0:
+            print("time", t2 - t1, "epoch", i, "loss", loss)
 
         w1 -= lr * l1_grad.dW
         b1 -= lr * l1_grad.db
@@ -75,7 +80,18 @@ if __name__ == "__main__":
         w2 -= lr * l2_grad.dW
         b2 -= lr * l2_grad.db
 
+        if i % 50 == 0:
+            print(
+                "epoch",
+                i,
+                "train",
+                accuracy(_x, y_train),
+                "test",
+                accuracy((X_test.astype(float) / 255.0).reshape(-1, 784), y_test),
+            )
+
     # Evaluate after training
-    x_test = (X_test.astype(float) / 255.0).reshape(-1, 784)
     print(f"\nTrain accuracy: {accuracy(_x, y_train):.2f}%")
-    print(f"Test accuracy: {accuracy(x_test, y_test):.2f}%")
+    print(
+        f"Test accuracy: {accuracy((X_test.astype(float) / 255.0).reshape(-1, 784), y_test):.2f}%"
+    )
