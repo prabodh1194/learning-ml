@@ -9,6 +9,7 @@ import numpy as np
 from layers import linear as l, relu as r
 from loss_functions import ce
 from mnist.mnist_loader.loader import load_mnist
+import matplotlib.pyplot as plt
 
 np.random.seed(42)
 
@@ -65,8 +66,12 @@ if __name__ == "__main__":
     lr = 0.01
     epochs = int(1e3)
 
+    losses = []
+    test_acc = []
+    train_acc = []
+
     for i in range(epochs):
-        lr = .01 if i < 600 else .5
+        # lr = .01 if i < 600 else .5
 
         t1 = time.time()
         loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)
@@ -76,6 +81,8 @@ if __name__ == "__main__":
         if i % 10 == 0:
             print("time", t2 - t1, "epoch", i, "loss", loss)
 
+        losses.append(loss)
+
         w1 -= lr * l1_grad.dW
         b1 -= lr * l1_grad.db
 
@@ -83,17 +90,39 @@ if __name__ == "__main__":
         b2 -= lr * l2_grad.db
 
         if i % 50 == 0:
-            print(
-                "epoch",
-                i,
-                "train",
-                accuracy(_x, y_train),
-                "test",
-                accuracy((X_test.astype(float) / 255.0).reshape(-1, 784), y_test),
+            _train_acc = accuracy(_x, y_train)
+            _test_acc = accuracy(
+                (X_test.astype(float) / 255.0).reshape(-1, 784), y_test
             )
+            print("epoch", i, "train", _train_acc, "test", _test_acc)
+
+            train_acc.append(_train_acc)
+            test_acc.append(_test_acc)
 
     # Evaluate after training
     print(f"\nTrain accuracy: {accuracy(_x, y_train):.2f}%")
     print(
         f"Test accuracy: {accuracy((X_test.astype(float) / 255.0).reshape(-1, 784), y_test):.2f}%"
     )
+
+    # create a row with 2 plots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+    fig.suptitle(f"lr={lr}, n1={n1}, epochs={epochs}", fontsize=12)
+
+    # fig 1: loss curve
+    ax1.plot(losses)
+    ax1.set_title("Training loss")
+    ax1.set_xlabel("Epoch")
+    ax1.set_ylabel("Loss")
+
+    # fig 2: accuracy
+    ax2.plot(train_acc, label="Train accuracy")
+    ax2.plot(test_acc, label="Test accuracy")
+    ax2.set_xlabel("Epoch")
+    ax2.set_ylabel("Accuracy")
+    ax2.set_title("accuracy (%)")
+    ax2.legend()
+
+    plt.tight_layout()
+    plt.savefig("loss_accuracy.png")
+    plt.show()
