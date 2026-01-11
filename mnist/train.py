@@ -66,6 +66,8 @@ if __name__ == "__main__":
     epochs = int(1e3)
 
     for i in range(epochs):
+        lr = .01 if i < 600 else .5
+
         t1 = time.time()
         loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)
         l1_grad, l2_grad = backward(_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe)
