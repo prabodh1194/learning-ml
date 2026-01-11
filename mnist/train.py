@@ -71,7 +71,7 @@ if __name__ == "__main__":
     train_acc = []
 
     for i in range(epochs):
-        # lr = .01 if i < 600 else .5
+        lr = .01 if i < .6 * epochs else .5
 
         t1 = time.time()
         loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)
@@ -107,7 +107,7 @@ if __name__ == "__main__":
 
     # create a row with 2 plots
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-    fig.suptitle(f"lr={lr}, n1={n1}, epochs={epochs}", fontsize=12)
+    fig.suptitle(f"lr={lr}, n1={n1}, epochs={epochs}, lr_decay=60%", fontsize=12)
 
     # fig 1: loss curve
     ax1.plot(losses)
