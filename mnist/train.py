@@ -116,8 +116,8 @@ if __name__ == "__main__":
     ax1.set_ylabel("Loss")
 
     # fig 2: accuracy
-    ax2.plot(train_acc, label="Train accuracy")
-    ax2.plot(test_acc, label="Test accuracy")
+    ax2.plot([i * 50 for i in range(len(train_acc))], train_acc, label="Train accuracy")
+    ax2.plot([i * 50 for i in range(len(test_acc))], test_acc, label="Test accuracy")
     ax2.set_xlabel("Epoch")
     ax2.set_ylabel("Accuracy")
     ax2.set_title("accuracy (%)")
