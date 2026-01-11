@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # hyperparameter: neurons in first layer
     n1 = 100
 
-    x = (X_train.astype(float) / 255.0).reshape(-1, 784)
+    _x = (X_train.astype(float) / 255.0).reshape(-1, 784)
 
     # input linear layer
     w1 = np.random.randn(784, n1) * np.sqrt(2 / 784)  # kaiming init for stability
@@ -26,15 +26,56 @@ if __name__ == "__main__":
     w2 = np.random.randn(n1, 10) * np.sqrt(2 / n1)  # kaiming init for stability
     b2 = np.random.randn(10)
 
-    def forward(step: int):
+    def forward(x):
         # non-linear activation
-        l1_ = l.Linear.np.forward(x, w1, b1)
-        r_ = r.Relu.np.forward(l1_[0])
-        l2_ = l.Linear.np.forward(r_[0], w2, b2)
+        l1_out, l1_cache = l.Linear.np.forward(x, w1, b1)
+        r_out, r_cache = r.Relu.np.forward(l1_out)
+        l2_out, l2_cache = l.Linear.np.forward(r_out, w2, b2)
 
         y_ohe = np.eye(10)[y_train]
-        loss = ce.CE.np.forward(l2_[0], y_ohe)
+        loss = ce.CE.np.forward(l2_out, y_ohe)
 
-        print("step", step, "loss", loss)
+        return loss, (l1_cache, r_cache, l2_cache, l2_out, y_ohe)
 
-    forward(0)
+    def backward(l1_cache, r_cache, l2_cache, l2_out, y_ohe):
+        back_ce = ce.CE.np.backward(l2_out, y_ohe)
+        back_l2 = l.Linear.np.backward(back_ce, l2_cache)
+        back_r = r.Relu.np.backward(back_l2.dX, r_cache)
+        back_l1 = l.Linear.np.backward(back_r.dX, l1_cache)
+
+        # only l1 & l2 layers have fields that can be modified by gradients.
+        return back_l1, back_l2
+
+    def predict(x):
+        """Forward pass without loss - just get logits"""
+        l1_out, _ = l.Linear.np.forward(x, w1, b1)
+        r_out, _ = r.Relu.np.forward(l1_out)
+        l2_out, _ = l.Linear.np.forward(r_out, w2, b2)
+        return l2_out
+
+    def accuracy(x, y):
+        """Compute accuracy: % of correct predictions"""
+        logits = predict(x)
+        preds = np.argmax(logits, axis=1)
+        return (preds == y).mean() * 100
+
+    # 2 hyperparameters
+    lr = .01
+    epochs = int(1e3)
+
+    for i in range(epochs):
+        loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)
+        l1_grad, l2_grad = backward(_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe)
+
+        print("epoch", i, "loss", loss)
+
+        w1 -= lr * l1_grad.dW
+        b1 -= lr * l1_grad.db
+
+        w2 -= lr * l2_grad.dW
+        b2 -= lr * l2_grad.db
+
+    # Evaluate after training
+    x_test = (X_test.astype(float) / 255.0).reshape(-1, 784)
+    print(f"\nTrain accuracy: {accuracy(_x, y_train):.2f}%")
+    print(f"Test accuracy: {accuracy(x_test, y_test):.2f}%")
