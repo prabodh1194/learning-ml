@@ -7,7 +7,7 @@ import numpy as np
 import mlx.core as mx
 import torch
 
-from base import LossFunction, test_loss
+from loss_functions.base import LossFunction, test_loss
 
 
 class CE(LossFunction):
@@ -22,7 +22,8 @@ class CE(LossFunction):
 
             p = logits_exp / logits_exp_norm
 
-            loss = (-1 / targets[0].size) * (targets * np.log(p)).sum()
+            n_samples = targets.shape[0]
+            loss = -(targets * np.log(p)).sum() / n_samples
 
             return loss
 
