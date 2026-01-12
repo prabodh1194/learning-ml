@@ -118,6 +118,30 @@ class SinusoidalPositionalEncoding:
             return pe
 
 
+class LearnedPositionalEmbedding:
+    """
+    Learned positional embeddings (GPT-style).
+    Just a lookup table: position index -> embedding vector.
+
+    Forward: PE = W[positions]
+    Backward: same as Embedding layer (accumulate gradients at looked-up rows)
+    """
+    class np:
+        @staticmethod
+        def forward(seq_len: int, W: np.ndarray) -> np.ndarray:
+            """
+            Args:
+                seq_len: T (actual sequence length)
+                W: (max_seq_len, C) learnable embedding matrix
+
+            Returns:
+                PE: (T, C) positional embeddings
+            """
+            positions = np.arange(seq_len)
+            pe = W[positions]
+            return pe
+
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
