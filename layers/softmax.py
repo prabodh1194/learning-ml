@@ -6,6 +6,8 @@ Numerically stable: subtract max before exp
 """
 
 from dataclasses import dataclass
+
+import mlx.core as mx
 import numpy as np
 import torch
 
@@ -38,6 +40,11 @@ class Softmax:
         @staticmethod
         def forward(x: torch.Tensor, axis: int = -1) -> torch.Tensor:
             return torch.nn.functional.softmax(x, dim=axis)
+
+    class mlx:
+        @staticmethod
+        def forward(x: mx.array, axis: int = -1) -> mx.array:
+            return mx.softmax(x, axis=axis)
 
 
 if __name__ == "__main__":

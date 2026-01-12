@@ -29,6 +29,7 @@ the values by summation.
 import math
 from dataclasses import dataclass
 
+import mlx.core as mx
 import numpy as np
 import torch
 import layers.softmax as s
@@ -85,6 +86,15 @@ class ScaledDotProductAttention(Layer):
         def forward(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
             scores = Q @ K.transpose(2, 1) / math.sqrt(Q.shape[-1])
             weights = torch.softmax(scores, dim=-1)
+            out = weights @ V
+
+            return out
+
+    class mlx:
+        @staticmethod
+        def forward(Q: mx.array, K: mx.array, V: mx.array) -> mx.array:
+            scores = Q @ mx.transpose(K, axes=(0, 2, 1)) / mx.sqrt(Q.shape[-1])
+            weights = mx.softmax(scores, axis=-1)
             out = weights @ V
 
             return out

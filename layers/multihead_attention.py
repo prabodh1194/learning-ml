@@ -48,13 +48,17 @@ Parallelization Insights:
      Head 2:                   [████████]
      ...
 
-TODO: Implement parallel version with MLX vmap for scaling comparison
+4. MLX PARALLEL IMPLEMENTATION
+   - Reshape (B, T, C) -> (B, H, T, C/H) to add head dimension
+   - Single batched matmul across all heads simultaneously
+   - No Python loop overhead
 ---
 """
 
 import time
 from dataclasses import dataclass
 
+import mlx.core as mx
 import numpy as np
 import torch
 
@@ -125,6 +129,34 @@ class MultiHeadAttention(Layer):
 
             return torch.concatenate(heads, dim=-1) @ W
 
+    class mlx:
+        @staticmethod
+        def forward(
+            Q: mx.array, K: mx.array, V: mx.array, W: mx.array, num_heads: int
+        ) -> mx.array:
+            """
+            Parallel MHA: reshape to add head dim, run attention once across all heads.
+
+            (B, T, C) -> (B, H, T, C/H) -> attention -> (B, T, C)
+            """
+            B, T, C = Q.shape
+            head_dim = C // num_heads
+
+            # Reshape: (B, T, C) -> (B, T, H, C/H) -> (B, H, T, C/H)
+            Q = Q.reshape(B, T, num_heads, head_dim).transpose(0, 2, 1, 3)
+            K = K.reshape(B, T, num_heads, head_dim).transpose(0, 2, 1, 3)
+            V = V.reshape(B, T, num_heads, head_dim).transpose(0, 2, 1, 3)
+
+            # Attention in parallel: (B, H, T, C/H) @ (B, H, C/H, T) -> (B, H, T, T)
+            scores = Q @ mx.transpose(K, axes=(0, 1, 3, 2)) / mx.sqrt(head_dim)
+            weights = mx.softmax(scores, axis=-1)
+            out = weights @ V  # (B, H, T, C/H)
+
+            # Reshape back: (B, H, T, C/H) -> (B, T, H, C/H) -> (B, T, C)
+            out = out.transpose(0, 2, 1, 3).reshape(B, T, C)
+
+            return out @ W
+
 
 if __name__ == "__main__":
     np.random.seed(42)
@@ -178,8 +210,37 @@ if __name__ == "__main__":
     t1 = time.perf_counter()
     print(f"torch backward: {(t1-t0)*1000:.2f}ms")
 
+    # mlx
+    Q_mx = mx.array(Q)
+    K_mx = mx.array(K)
+    V_mx = mx.array(V)
+    W_mx = mx.array(W)
+
+    # mlx forward (parallel - no loop!)
+    t0 = time.perf_counter()
+    out_mx = MultiHeadAttention.mlx.forward(Q_mx, K_mx, V_mx, W_mx, num_heads)
+    mx.eval(out_mx)  # force evaluation
+    t1 = time.perf_counter()
+    print(f"mlx forward: {(t1-t0)*1000:.2f}ms")
+
     print()
     print("Q", np.allclose(dQ_np, Q_pt.grad.numpy()))
     print("K", np.allclose(dK_np, K_pt.grad.numpy()))
     print("V", np.allclose(dV_np, V_pt.grad.numpy()))
     print("W", np.allclose(dW_np, W_pt.grad.numpy()))
+    print("MLX fwd", np.allclose(out, np.array(out_mx), atol=1e-5))
+
+    # mlx backward using autograd
+    # Note: mx.grad re-runs forward internally to trace the computation graph
+    dout_mx = mx.array(dout)
+
+    def mlx_mha_loss(Q, K, V, W):
+        out = MultiHeadAttention.mlx.forward(Q, K, V, W, num_heads)
+        return (out * dout_mx).sum()
+
+    dQ_mx, dK_mx, dV_mx, dW_mx = mx.grad(mlx_mha_loss, argnums=(0, 1, 2, 3))(Q_mx, K_mx, V_mx, W_mx)
+
+    print("MLX dQ", np.allclose(dQ_np, np.array(dQ_mx), atol=1e-4))
+    print("MLX dK", np.allclose(dK_np, np.array(dK_mx), atol=1e-4))
+    print("MLX dV", np.allclose(dV_np, np.array(dV_mx), atol=1e-4))
+    print("MLX dW", np.allclose(dW_np, np.array(dW_mx), atol=1e-4))
