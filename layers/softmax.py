@@ -44,4 +44,16 @@ if __name__ == "__main__":
     np.random.seed(42)
     x = np.random.randn(2, 3, 4)
 
-    out_np,
+    # numpy forward
+    out_np, cache = Softmax.np.forward(x)
+
+    # pytorch forward
+    x_pt = torch.tensor(x, requires_grad=True)
+    out_pt = Softmax.torch.forward(x_pt)
+
+    dout = np.random.randn(2, 3, 4)
+
+    dx_np = Softmax.np.backward(dout, cache)
+    out_pt.backward(torch.tensor(dout))
+
+    print("dx", np.allclose(dx_np, x_pt.grad.numpy()))

@@ -26,6 +26,7 @@ the values by summation.
 
 """
 
+import math
 from dataclasses import dataclass
 
 import numpy as np
@@ -53,15 +54,35 @@ class ScaledDotProductAttention:
             return out, AttentionCache(Q, K, V, weights, softmax_cache)
 
         @staticmethod
-        def backward(dout, cache):
-            # TODO
-            pass
+        def backward(dout, cache: AttentionCache):
+            """
+            if C = A @ B
+            then the differentials of both terms are quite mechanical.
+
+            for dC/dA; in C = A @ B; replace A with dout & transpose the other term; hence:
+            dC/dA = dout @ B^T
+
+            similarly, for dC/dB; replace B with dout & transpose the other term; hence:
+            dC/dB = A^T @ dout
+            """
+            dV = cache.weight.transpose(0, 2, 1) @ dout
+            dweights = dout @ cache.V.transpose(0, 2, 1)
+            dscores = s.Softmax.np.backward(dweights, cache.softmax_cache)
+            dQ = dscores @ cache.K / np.sqrt(cache.Q.shape[-1])
+            dK = (
+                cache.Q.transpose(0, 2, 1) @ dscores / np.sqrt(cache.Q.shape[-1])
+            ).transpose(0, 2, 1)
+
+            return dQ, dK, dV
 
     class torch:
         @staticmethod
-        def forward(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor):
-            # TODO
-            pass
+        def forward(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
+            scores = Q @ K.transpose(2, 1) / math.sqrt(Q.shape[-1])
+            weights = torch.softmax(scores, dim=-1)
+            out = weights @ V
+
+            return out
 
 
 if __name__ == "__main__":
@@ -74,3 +95,23 @@ if __name__ == "__main__":
     Q = np.random.randn(B, T, C)
     K = np.random.randn(B, T, C)
     V = np.random.randn(B, T, C)
+
+    # numpy forward
+    out_np, cache = ScaledDotProductAttention.np.forward(Q, K, V)
+
+    # pytorch forward
+    Q_pt = torch.tensor(Q, requires_grad=True)
+    K_pt = torch.tensor(K, requires_grad=True)
+    V_pt = torch.tensor(V, requires_grad=True)
+
+    # pytorch forward
+    out_pt = ScaledDotProductAttention.torch.forward(Q_pt, K_pt, V_pt)
+
+    dout = np.random.randn(B, T, C)
+    dQ_np, dK_np, dV_np = ScaledDotProductAttention.np.backward(dout, cache)
+
+    out_pt.backward(torch.tensor(dout))
+
+    print("dQ:", np.allclose(dQ_np, Q_pt.grad.numpy()))
+    print("dK:", np.allclose(dK_np, K_pt.grad.numpy()))
+    print("dV:", np.allclose(dV_np, V_pt.grad.numpy()))
