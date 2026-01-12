@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass
 
 import numpy as np
@@ -82,12 +83,23 @@ if __name__ == "__main__":
     V = np.random.randn(B, T, C)
     W = np.random.randn(C, C)
 
+    # numpy forward
+    t0 = time.perf_counter()
     out, cache = MultiHeadAttention.np.forward(
         np.split(Q, num_heads, axis=-1),
         np.split(K, num_heads, axis=-1),
         np.split(V, num_heads, axis=-1),
         W,
     )
+    t1 = time.perf_counter()
+    print(f"numpy forward: {(t1-t0)*1000:.2f}ms")
+
+    # numpy backward
+    dout = np.random.randn(B, T, C)
+    t0 = time.perf_counter()
+    dQ_np, dK_np, dV_np, dW_np = MultiHeadAttention.np.backward(dout, cache)
+    t1 = time.perf_counter()
+    print(f"numpy backward: {(t1-t0)*1000:.2f}ms")
 
     # pt
     Q_pt = torch.tensor(Q, requires_grad=True)
@@ -95,18 +107,24 @@ if __name__ == "__main__":
     V_pt = torch.tensor(V, requires_grad=True)
     W_pt = torch.tensor(W, requires_grad=True)
 
+    # pytorch forward
+    t0 = time.perf_counter()
     out_pt = MultiHeadAttention.torch.forward(
         torch.chunk(Q_pt, num_heads, dim=-1),
         torch.chunk(K_pt, num_heads, dim=-1),
         torch.chunk(V_pt, num_heads, dim=-1),
         W_pt,
     )
+    t1 = time.perf_counter()
+    print(f"torch forward: {(t1-t0)*1000:.2f}ms")
 
-    dout = np.random.randn(B, T, C)
-
-    dQ_np, dK_np, dV_np, dW_np = MultiHeadAttention.np.backward(dout, cache)
+    # pytorch backward
+    t0 = time.perf_counter()
     out_pt.backward(torch.from_numpy(dout))
+    t1 = time.perf_counter()
+    print(f"torch backward: {(t1-t0)*1000:.2f}ms")
 
+    print()
     print("Q", np.allclose(dQ_np, Q_pt.grad.numpy()))
     print("K", np.allclose(dK_np, K_pt.grad.numpy()))
     print("V", np.allclose(dV_np, V_pt.grad.numpy()))
