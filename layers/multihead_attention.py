@@ -1,3 +1,57 @@
+"""
+Multi-Head Attention
+
+MultiHead(Q, K, V) = Concat(head_1, ..., head_h) @ W_O
+where head_i = Attention(Q @ W_Q_i, K @ W_K_i, V @ W_V_i)
+
+---
+Parallelization Insights:
+
+1. MULTI-HEAD PARALLELISM
+   - Each head is completely independent during forward pass
+   - No communication between heads until final concatenation
+   - GPU can run all heads simultaneously: 8 heads = 8x speedup potential
+
+   Sequential (NumPy):
+     for head in range(num_heads):
+         output[head] = Attention(Q[head], K[head], V[head])
+     Total time = num_heads × single_head_time
+
+   Parallel (GPU/MLX):
+     output = vmap(attention)(Q_heads, K_heads, V_heads)
+     Total time ≈ single_head_time
+
+2. BATCH PARALLELISM
+   - W matrices: (C, C) - no batch dimension! Shared across all samples
+   - Input X: (B, T, C) - batch dimension preserved through matmul
+   - Each batch item processes independently
+
+   Benefits:
+     - Fewer parameters (scales with C, not B)
+     - Batch size can vary at inference
+     - Massive parallelism: B independent computations
+
+3. WHY TRANSFORMERS SCALE
+   - 3 levels of parallelism: Batch (B) × Heads (H) × BLAS ops
+   - Example: B=32, H=8, C=512 → 67M parallel ops
+   - This is why transformers killed RNNs (which are sequential by nature)
+
+   GPU execution:
+     Head 0: [████████]
+     Head 1: [████████]  ← All parallel!
+     Head 2: [████████]
+     ...
+
+   vs NumPy (sequential):
+     Head 0: [████████]
+     Head 1:          [████████]
+     Head 2:                   [████████]
+     ...
+
+TODO: Implement parallel version with MLX vmap for scaling comparison
+---
+"""
+
 import time
 from dataclasses import dataclass
 
