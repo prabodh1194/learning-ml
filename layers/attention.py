@@ -32,6 +32,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 import layers.softmax as s
+from layers.base import Layer
 
 
 @dataclass
@@ -43,10 +44,12 @@ class AttentionCache:
     softmax_cache: s.SoftmaxCache
 
 
-class ScaledDotProductAttention:
+class ScaledDotProductAttention(Layer):
     class np:
         @staticmethod
-        def forward(Q: np.ndarray, K: np.ndarray, V: np.ndarray):
+        def forward(
+            Q: np.ndarray, K: np.ndarray, V: np.ndarray
+        ) -> tuple[np.ndarray, AttentionCache]:
             scores = Q @ K.transpose(0, 2, 1) / np.sqrt(Q.shape[-1])
             weights, softmax_cache = s.Softmax.np.forward(scores)
             out = weights @ V
@@ -54,7 +57,9 @@ class ScaledDotProductAttention:
             return out, AttentionCache(Q, K, V, weights, softmax_cache)
 
         @staticmethod
-        def backward(dout, cache: AttentionCache):
+        def backward(
+            dout, cache: AttentionCache
+        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
             """
             if C = A @ B
             then the differentials of both terms are quite mechanical.
