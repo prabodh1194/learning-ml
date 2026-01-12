@@ -10,6 +10,7 @@ Key difference from loss functions:
 - Forward returns (output, cache) - cache stores values needed for backward
 - Backward takes (upstream_grad, cache) and returns LayerGradients
 """
+
 from dataclasses import dataclass
 from typing import Protocol, NamedTuple, Any
 import numpy as np
@@ -25,6 +26,7 @@ class LayerGradients:
     dW: gradient w.r.t. weights (if layer has weights)
     db: gradient w.r.t. bias (if layer has bias)
     """
+
     dX: np.ndarray
     dW: np.ndarray | None = None
     db: np.ndarray | None = None
@@ -107,21 +109,25 @@ def test_layer_linear(
     print("=" * 40)
 
     # Assertions
-    assert np.allclose(grads_np.dX, X_pt.grad.numpy(), rtol=rtol, atol=atol), \
-        f"dX mismatch!\n  Expected: {X_pt.grad.numpy()}\n  Got: {grads_np.dX}"
+    assert np.allclose(
+        grads_np.dX, X_pt.grad.numpy(), rtol=rtol, atol=atol
+    ), f"dX mismatch!\n  Expected: {X_pt.grad.numpy()}\n  Got: {grads_np.dX}"
     print("✓ dX matches PyTorch!")
 
-    assert np.allclose(grads_np.dW, W_pt.grad.numpy(), rtol=rtol, atol=atol), \
-        f"dW mismatch!\n  Expected: {W_pt.grad.numpy()}\n  Got: {grads_np.dW}"
+    assert np.allclose(
+        grads_np.dW, W_pt.grad.numpy(), rtol=rtol, atol=atol
+    ), f"dW mismatch!\n  Expected: {W_pt.grad.numpy()}\n  Got: {grads_np.dW}"
     print("✓ dW matches PyTorch!")
 
-    assert np.allclose(grads_np.db, b_pt.grad.numpy(), rtol=rtol, atol=atol), \
-        f"db mismatch!\n  Expected: {b_pt.grad.numpy()}\n  Got: {grads_np.db}"
+    assert np.allclose(
+        grads_np.db, b_pt.grad.numpy(), rtol=rtol, atol=atol
+    ), f"db mismatch!\n  Expected: {b_pt.grad.numpy()}\n  Got: {grads_np.db}"
     print("✓ db matches PyTorch!")
 
     # Also check forward pass
-    assert np.allclose(Y_np, Y_pt.detach().numpy(), rtol=rtol, atol=atol), \
-        f"Forward mismatch!"
+    assert np.allclose(
+        Y_np, Y_pt.detach().numpy(), rtol=rtol, atol=atol
+    ), f"Forward mismatch!"
     print("✓ Forward pass matches PyTorch!")
 
 
@@ -155,10 +161,12 @@ def test_layer_activation(
     print("=" * 40)
 
     # Assertions
-    assert np.allclose(grads_np.dX, X_pt.grad.numpy(), rtol=rtol, atol=atol), \
-        f"dX mismatch!\n  Expected: {X_pt.grad.numpy()}\n  Got: {grads_np.dX}"
+    assert np.allclose(
+        grads_np.dX, X_pt.grad.numpy(), rtol=rtol, atol=atol
+    ), f"dX mismatch!\n  Expected: {X_pt.grad.numpy()}\n  Got: {grads_np.dX}"
     print("✓ dX matches PyTorch!")
 
-    assert np.allclose(Y_np, Y_pt.detach().numpy(), rtol=rtol, atol=atol), \
-        f"Forward mismatch!"
+    assert np.allclose(
+        Y_np, Y_pt.detach().numpy(), rtol=rtol, atol=atol
+    ), f"Forward mismatch!"
     print("✓ Forward pass matches PyTorch!")

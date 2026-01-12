@@ -36,25 +36,26 @@ class GELU(Layer):
 
     dGELU/dx = 0.5 * (1 + t) + 0.5 * x * dt/dx
     """
+
     class np:
         @staticmethod
         def forward(X: np.ndarray) -> tuple[np.ndarray, GELUCache]:
-            s = ((2 / math.pi) ** .5) * (X + 0.044715 * X ** 3)
+            s = ((2 / math.pi) ** 0.5) * (X + 0.044715 * X**3)
             t = np.tanh(s)
-            Y = .5 * X * (1 + t)
+            Y = 0.5 * X * (1 + t)
             return Y, GELUCache(X, s, t)
 
         @staticmethod
         def backward(dout: np.ndarray, cache: GELUCache) -> LayerGradients:
-            ds = ((2 / math.pi) ** .5) * (1 + 3 * 0.044715 * cache.X ** 2)
-            dt = (1 - cache.t ** 2) * ds
-            out = .5 * (1 + cache.t) + .5 * cache.X * dt
+            ds = ((2 / math.pi) ** 0.5) * (1 + 3 * 0.044715 * cache.X**2)
+            dt = (1 - cache.t**2) * ds
+            out = 0.5 * (1 + cache.t) + 0.5 * cache.X * dt
             return LayerGradients(dout * out)
 
     class torch:
         @staticmethod
         def forward(X: torch.Tensor) -> torch.Tensor:
-            return torch.nn.functional.gelu(X, approximate='tanh')
+            return torch.nn.functional.gelu(X, approximate="tanh")
 
 
 if __name__ == "__main__":

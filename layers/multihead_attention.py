@@ -77,12 +77,16 @@ class MultiHeadAttention(Layer):
     class np:
         @staticmethod
         def forward(
-            Q: list[np.ndarray], K: list[np.ndarray], V: list[np.ndarray], W: np.ndarray
+            Q: list[np.ndarray],
+            K: list[np.ndarray],
+            V: list[np.ndarray],
+            W: np.ndarray,
+            mask: np.ndarray = None,
         ) -> tuple[np.ndarray, MultiHeadAttentionCache]:
             heads: list[tuple[np.ndarray, AttentionCache]] = []
 
             for q_h, k_h, v_h in zip(Q, K, V):
-                heads.append(ScaledDotProductAttention.np.forward(q_h, k_h, v_h))
+                heads.append(ScaledDotProductAttention.np.forward(q_h, k_h, v_h, mask))
 
             X = np.concatenate(list(map(lambda x: x[0], heads)), axis=-1)
 
@@ -121,11 +125,12 @@ class MultiHeadAttention(Layer):
             K: tuple[torch.Tensor],
             V: tuple[torch.Tensor],
             W: torch.Tensor,
+            mask: torch.Tensor = None,
         ) -> torch.Tensor:
             heads: list[torch.Tensor] = []
 
             for q, k, v in zip(Q, K, V):
-                heads.append(ScaledDotProductAttention.torch.forward(q, k, v))
+                heads.append(ScaledDotProductAttention.torch.forward(q, k, v, mask))
 
             return torch.concatenate(heads, dim=-1) @ W
 
@@ -238,7 +243,9 @@ if __name__ == "__main__":
         out = MultiHeadAttention.mlx.forward(Q, K, V, W, num_heads)
         return (out * dout_mx).sum()
 
-    dQ_mx, dK_mx, dV_mx, dW_mx = mx.grad(mlx_mha_loss, argnums=(0, 1, 2, 3))(Q_mx, K_mx, V_mx, W_mx)
+    dQ_mx, dK_mx, dV_mx, dW_mx = mx.grad(mlx_mha_loss, argnums=(0, 1, 2, 3))(
+        Q_mx, K_mx, V_mx, W_mx
+    )
 
     print("MLX dQ", np.allclose(dQ_np, np.array(dQ_mx), atol=1e-4))
     print("MLX dK", np.allclose(dK_np, np.array(dK_mx), atol=1e-4))

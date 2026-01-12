@@ -30,7 +30,6 @@ class Softmax:
             p = exp_x / sum_exp
             return p, SoftmaxCache(p, axis)
 
-
         @staticmethod
         def backward(dout: np.ndarray, cache: SoftmaxCache):
             p = cache.p

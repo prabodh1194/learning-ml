@@ -126,6 +126,7 @@ class LearnedPositionalEmbedding:
     Forward: PE = W[positions]
     Backward: same as Embedding layer (accumulate gradients at looked-up rows)
     """
+
     class np:
         @staticmethod
         def forward(seq_len: int, W: np.ndarray) -> np.ndarray:

@@ -54,6 +54,7 @@ class Dropout(Layer):
 
     Dropped neurons (mask=0) receive zero gradient.
     """
+
     class np:
         @staticmethod
         def forward(

@@ -20,6 +20,7 @@ class Embedding(Layer):
 
     No dX because indices are integers, not differentiable.
     """
+
     class np:
         @staticmethod
         def forward(
@@ -29,7 +30,9 @@ class Embedding(Layer):
             return Y, EmbeddingCache(indices, W.shape[0])
 
         @staticmethod
-        def backward(dout: np.ndarray, cache: EmbeddingCache, W: np.ndarray) -> LayerGradients:
+        def backward(
+            dout: np.ndarray, cache: EmbeddingCache, W: np.ndarray
+        ) -> LayerGradients:
             dW = np.zeros_like(W)
 
             np.add.at(dW, cache.indices, dout)

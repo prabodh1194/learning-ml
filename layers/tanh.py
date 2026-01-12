@@ -15,13 +15,13 @@ class Tanh(Layer):
         @staticmethod
         def forward(X: np.ndarray) -> tuple[np.ndarray, TanhCache]:
             e = np.exp(X)
-            Y = (e - 1/e) / (e + 1/e)
+            Y = (e - 1 / e) / (e + 1 / e)
 
             return Y, TanhCache(Y)
 
         @staticmethod
         def backward(dout: np.ndarray, cache: TanhCache) -> LayerGradients:
-            return LayerGradients(dout * (1 - cache.Y ** 2))
+            return LayerGradients(dout * (1 - cache.Y**2))
 
     class torch:
         @staticmethod

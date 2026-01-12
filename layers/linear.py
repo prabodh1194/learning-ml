@@ -61,9 +61,13 @@ class Linear(Layer):
             - every new neuron in the linear layer, adds a new dout in output. this is a column-wise implication.
             """
 
-            dW = cache.X.T @ dout
+            if cache.X.ndim == 2:
+                dW = cache.X.T @ dout
+                db = dout.sum(axis=0)
+            else:
+                dW = (cache.X.transpose(0, 2, 1) @ dout).sum(axis=0)
+                db = dout.sum(axis=(0, 1))
             dX = dout @ cache.W.T
-            db = dout.sum(axis=0)
 
             return LayerGradients(dX, dW, db)
 

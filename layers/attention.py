@@ -49,9 +49,13 @@ class ScaledDotProductAttention(Layer):
     class np:
         @staticmethod
         def forward(
-            Q: np.ndarray, K: np.ndarray, V: np.ndarray
+            Q: np.ndarray, K: np.ndarray, V: np.ndarray, mask: np.ndarray = None
         ) -> tuple[np.ndarray, AttentionCache]:
             scores = Q @ K.transpose(0, 2, 1) / np.sqrt(Q.shape[-1])
+
+            if mask is not None:
+                scores = np.where(mask == 0, -np.inf, scores)
+
             weights, softmax_cache = s.Softmax.np.forward(scores)
             out = weights @ V
 
@@ -83,8 +87,14 @@ class ScaledDotProductAttention(Layer):
 
     class torch:
         @staticmethod
-        def forward(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
+        def forward(
+            Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor, mask: torch.Tensor = None
+        ) -> torch.Tensor:
             scores = Q @ K.transpose(2, 1) / math.sqrt(Q.shape[-1])
+
+            if mask is not None:
+                scores = scores.masked_fill(mask == 0, -torch.inf)
+
             weights = torch.softmax(scores, dim=-1)
             out = weights @ V
 

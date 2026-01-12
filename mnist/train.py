@@ -71,7 +71,7 @@ if __name__ == "__main__":
     train_acc = []
 
     for i in range(epochs):
-        lr = .01 if i < .6 * epochs else .5
+        lr = 0.01 if i < 0.6 * epochs else 0.5
 
         t1 = time.time()
         loss, (_l1_cache, _r_cache, _l2_cache, _l2_out, _y_ohe) = forward(_x)

@@ -48,9 +48,7 @@ class HuberLoss(LossFunction):
             delta = 1.0
             diff = (targets - predictions).abs()
             loss = mx.where(
-                diff <= delta,
-                0.5 * (diff ** 2),
-                delta * (diff - 0.5 * delta)
+                diff <= delta, 0.5 * (diff**2), delta * (diff - 0.5 * delta)
             )
             return loss.mean()
 
@@ -59,11 +57,7 @@ class HuberLoss(LossFunction):
             delta = 1.0
             diff = targets - predictions
             abs_diff = diff.abs()
-            grad = mx.where(
-                abs_diff <= delta,
-                -diff,
-                -delta * mx.sign(diff)
-            )
+            grad = mx.where(abs_diff <= delta, -diff, -delta * mx.sign(diff))
             return grad / predictions.size
 
     class torch:
