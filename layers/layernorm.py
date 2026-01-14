@@ -76,8 +76,13 @@ class LayerNorm(Layer):
             in fact for a given sample, every dout linearly maps to the input x & accumulates across batches.
             """
             # Gradients for learnable parameters
-            dbeta = dout.sum(axis=0)
-            dgamma = (cache.X_hat * dout).sum(axis=0)
+            # For 3D input (B, T, C), sum over batch AND sequence
+            if dout.ndim == 2:
+                dbeta = dout.sum(axis=0)
+                dgamma = (cache.X_hat * dout).sum(axis=0)
+            else:  # 3D
+                dbeta = dout.sum(axis=(0, 1))
+                dgamma = (cache.X_hat * dout).sum(axis=(0, 1))
 
             # Gradient for input
             dX_hat = cache.gamma * dout

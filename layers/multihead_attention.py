@@ -134,9 +134,9 @@ class MultiHeadAttention(Layer):
     class torch:
         @staticmethod
         def forward(
-            Q: tuple[torch.Tensor],
-            K: tuple[torch.Tensor],
-            V: tuple[torch.Tensor],
+            Q: tuple[torch.Tensor, ...],
+            K: tuple[torch.Tensor, ...],
+            V: tuple[torch.Tensor, ...],
             W: torch.Tensor,
             mask: torch.Tensor = None,
         ) -> torch.Tensor:

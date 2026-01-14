@@ -67,7 +67,7 @@ class SelfAttention:
 
         return A, SelfAttentionCache(pe_cache, Q_cache, K_cache, V_cache, A_cache)
 
-    def backward(self, dout: np.ndarray, cache: SelfAttentionCache):
+    def backward(self, dout: np.ndarray, cache: SelfAttentionCache) -> tuple:
         dQ_out, dK_out, dV_out, dW = mha.MultiHeadAttention.np.backward(
             dout, cache.A_cache
         )
@@ -88,6 +88,31 @@ class SelfAttention:
         dpe = em.Embedding.np.backward(dx.sum(axis=0), cache.pe_cache, self.pe)
 
         return dX, dQ.dW, dQ.db, dK.dW, dK.db, dV.dW, dV.db, dW, dpe.dW
+
+    def pt_forward(self, X: torch.Tensor):
+        pe_pt = torch.tensor(self.pe, requires_grad=True)
+        Q_w_pt = torch.tensor(self.Q_w, requires_grad=True)
+        Q_b_pt = torch.tensor(self.Q_b, requires_grad=True)
+        K_w_pt = torch.tensor(self.K_w, requires_grad=True)
+        K_b_pt = torch.tensor(self.K_b, requires_grad=True)
+        V_w_pt = torch.tensor(self.V_w, requires_grad=True)
+        V_b_pt = torch.tensor(self.V_b, requires_grad=True)
+        W_pt = torch.tensor(self.W, requires_grad=True)
+
+        x_pt = X + pe_pt
+        Q_pt = x_pt @ Q_w_pt + Q_b_pt
+        K_pt = x_pt @ K_w_pt + K_b_pt
+        V_pt = x_pt @ V_w_pt + V_b_pt
+
+        out_pt = mha.MultiHeadAttention.torch.forward(
+            torch.chunk(Q_pt, self.num_heads, dim=-1),
+            torch.chunk(K_pt, self.num_heads, dim=-1),
+            torch.chunk(V_pt, self.num_heads, dim=-1),
+            W_pt,
+            torch.tril(torch.ones((self.T, self.T))),
+        )
+
+        return (out_pt, Q_w_pt, Q_b_pt, K_w_pt, K_b_pt, V_w_pt, V_b_pt, W_pt, pe_pt)
 
 
 if __name__ == "__main__":
@@ -111,28 +136,8 @@ if __name__ == "__main__":
 
     # pytorch forward
     X_pt = torch.tensor(X, requires_grad=True)
-    pe_pt = torch.tensor(s.pe, requires_grad=True)
-    Q_w_pt = torch.tensor(s.Q_w, requires_grad=True)
-    Q_b_pt = torch.tensor(s.Q_b, requires_grad=True)
-    K_w_pt = torch.tensor(s.K_w, requires_grad=True)
-    K_b_pt = torch.tensor(s.K_b, requires_grad=True)
-    V_w_pt = torch.tensor(s.V_w, requires_grad=True)
-    V_b_pt = torch.tensor(s.V_b, requires_grad=True)
-    W_pt = torch.tensor(s.W, requires_grad=True)
 
-    x_pt = X_pt + pe_pt
-    Q_pt = x_pt @ Q_w_pt + Q_b_pt
-    K_pt = x_pt @ K_w_pt + K_b_pt
-    V_pt = x_pt @ V_w_pt + V_b_pt
-
-    out_pt = mha.MultiHeadAttention.torch.forward(
-        torch.chunk(Q_pt, num_heads, dim=-1),
-        torch.chunk(K_pt, num_heads, dim=-1),
-        torch.chunk(V_pt, num_heads, dim=-1),
-        W_pt,
-        torch.tril(torch.ones((T, T))),
-    )
-
+    out_pt, Q_w_pt, Q_b_pt, K_w_pt, K_b_pt, V_w_pt, V_b_pt, W_pt, pe_pt = s.pt_forward(X_pt)
     out_pt.backward(torch.tensor(dout))
 
     print()
