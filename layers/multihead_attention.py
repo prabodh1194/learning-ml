@@ -5,6 +5,19 @@ MultiHead(Q, K, V) = Concat(head_1, ..., head_h) @ W_O
 where head_i = Attention(Q @ W_Q_i, K @ W_K_i, V @ W_V_i)
 
 ---
+What is W_O ?
+
+W_O is essential because:
+- Enables head communication - Heads learn complementary patterns, W_O combines them
+- Mixes information - Each output dimension uses all heads
+- Learned combination - W_O learns optimal mixing strategy
+- Recovers capacity - Maps from subspaces back to full space
+- Architectural efficiency - Mixing happens once, not re-learned everywhere
+
+Without W_O: Multi-head attention is just "multiple attention, stored side-by-side"
+With W_O: Multi-head attention is "multiple perspectives, intelligently synthesized"
+
+---
 Parallelization Insights:
 
 1. MULTI-HEAD PARALLELISM
