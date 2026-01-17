@@ -79,9 +79,7 @@ if __name__ == "__main__":
     b2_pt = torch.tensor(b2, requires_grad=True)
 
     # pt fwd
-    out_pt = FeedForward.torch.forward(
-        X_pt, w1_pt, b1_pt, w2_pt, b2_pt
-    )
+    out_pt = FeedForward.torch.forward(X_pt, w1_pt, b1_pt, w2_pt, b2_pt)
 
     print("fwd match", np.allclose(out_np, out_pt.detach().numpy()))
 

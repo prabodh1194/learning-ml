@@ -83,19 +83,25 @@ class EncoderBlock:
                 X + s_attn_out, gamma_1, beta_1
             )
 
-            ffn_out, ffn_cache = ffn.FeedForward.np.forward(l_norm_1_out, w1, b1, w2, b2)
+            ffn_out, ffn_cache = ffn.FeedForward.np.forward(
+                l_norm_1_out, w1, b1, w2, b2
+            )
 
             l_norm_2_out, l_norm_2_cache = ln.LayerNorm.np.forward(
                 l_norm_1_out + ffn_out, gamma_2, beta_2
             )
 
-            return l_norm_2_out, EncoderBlockCache(s_attn, s_attn_cache, l_norm_1_cache, ffn_cache, l_norm_2_cache)
+            return l_norm_2_out, EncoderBlockCache(
+                s_attn, s_attn_cache, l_norm_1_cache, ffn_cache, l_norm_2_cache
+            )
 
         @staticmethod
         def backward(dout: np.ndarray, cache: EncoderBlockCache):
             l2_dout = ln.LayerNorm.np.backward(dout, cache.l_norm_2_cache)
             ffn_dout = ffn.FeedForward.np.backward(l2_dout.dX, cache.ffn_cache)
-            l1_dout = ln.LayerNorm.np.backward(ffn_dout[0] + l2_dout.dX, cache.l_norm_1_cache)
+            l1_dout = ln.LayerNorm.np.backward(
+                ffn_dout[0] + l2_dout.dX, cache.l_norm_1_cache
+            )
             s_attn_dout = cache.s_attn.backward(l1_dout.dX, cache.s_attn_cache)
 
             dX = s_attn_dout[0] + l1_dout.dX
@@ -103,11 +109,16 @@ class EncoderBlock:
             return (
                 dX,
                 # LN1 grads (gamma, beta)
-                l1_dout.dW, l1_dout.db,
+                l1_dout.dW,
+                l1_dout.db,
                 # FFN grads (dW1, db1, dW2, db2)
-                ffn_dout[1], ffn_dout[2], ffn_dout[3], ffn_dout[4],
+                ffn_dout[1],
+                ffn_dout[2],
+                ffn_dout[3],
+                ffn_dout[4],
                 # LN2 grads (gamma, beta)
-                l2_dout.dW, l2_dout.db,
+                l2_dout.dW,
+                l2_dout.db,
                 # Self-attention grads (dQ_w, dQ_b, dK_w, dK_b, dV_w, dV_b, dW, dpe)
                 *s_attn_dout[1:],
             )
@@ -136,7 +147,9 @@ class EncoderBlock:
             ffn_out = ffn.FeedForward.torch.forward(l_norm_1_out, w1, b1, w2, b2)
 
             # Residual + LayerNorm 2
-            l_norm_2_out = ln.LayerNorm.torch.forward(l_norm_1_out + ffn_out, gamma_2, beta_2)
+            l_norm_2_out = ln.LayerNorm.torch.forward(
+                l_norm_1_out + ffn_out, gamma_2, beta_2
+            )
 
             return l_norm_2_out, s_attn_params
 
@@ -176,8 +189,10 @@ if __name__ == "__main__":
         s_attn,
         gamma_1,
         beta_1,
-        w1_ffn, b1_ffn,
-        w2_ffn, b2_ffn,
+        w1_ffn,
+        b1_ffn,
+        w2_ffn,
+        b2_ffn,
         gamma_2,
         beta_2,
     )
@@ -188,13 +203,17 @@ if __name__ == "__main__":
         s_attn,
         gamma_1_pt,
         beta_1_pt,
-        w1_ffn_pt, b1_ffn_pt,
-        w2_ffn_pt, b2_ffn_pt,
+        w1_ffn_pt,
+        b1_ffn_pt,
+        w2_ffn_pt,
+        b2_ffn_pt,
         gamma_2_pt,
         beta_2_pt,
     )
 
-    print("Forward match:", np.allclose(encoder_out_np, encoder_out_pt.detach().numpy()))
+    print(
+        "Forward match:", np.allclose(encoder_out_np, encoder_out_pt.detach().numpy())
+    )
 
     # Backward
     dout = np.random.randn(B, T, C)

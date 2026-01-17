@@ -137,7 +137,9 @@ if __name__ == "__main__":
     # pytorch forward
     X_pt = torch.tensor(X, requires_grad=True)
 
-    out_pt, Q_w_pt, Q_b_pt, K_w_pt, K_b_pt, V_w_pt, V_b_pt, W_pt, pe_pt = s.pt_forward(X_pt)
+    out_pt, Q_w_pt, Q_b_pt, K_w_pt, K_b_pt, V_w_pt, V_b_pt, W_pt, pe_pt = s.pt_forward(
+        X_pt
+    )
     out_pt.backward(torch.tensor(dout))
 
     print()

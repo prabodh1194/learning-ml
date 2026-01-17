@@ -6,7 +6,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def visualize_attention(weights: np.ndarray, title: str = "Attention Weights", save_path: str = None):
+def visualize_attention(
+    weights: np.ndarray, title: str = "Attention Weights", save_path: str = None
+):
     """
     Visualize attention weights as a heatmap.
 
@@ -18,19 +20,19 @@ def visualize_attention(weights: np.ndarray, title: str = "Attention Weights", s
     T = weights.shape[0]
 
     plt.figure(figsize=(8, 6))
-    plt.imshow(weights, cmap='Blues')
-    plt.colorbar(label='Attention Weight')
-    plt.xlabel('Key Position')
-    plt.ylabel('Query Position')
+    plt.imshow(weights, cmap="Blues")
+    plt.colorbar(label="Attention Weight")
+    plt.xlabel("Key Position")
+    plt.ylabel("Query Position")
     plt.title(title)
-    plt.xticks(range(T), [f't{i}' for i in range(T)])
-    plt.yticks(range(T), [f't{i}' for i in range(T)])
+    plt.xticks(range(T), [f"t{i}" for i in range(T)])
+    plt.yticks(range(T), [f"t{i}" for i in range(T)])
 
     for i in range(T):
         for j in range(T):
             val = weights[i, j]
             if val > 0.01:
-                plt.text(j, i, f'{val:.2f}', ha='center', va='center', fontsize=8)
+                plt.text(j, i, f"{val:.2f}", ha="center", va="center", fontsize=8)
 
     plt.tight_layout()
 

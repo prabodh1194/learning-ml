@@ -89,13 +89,13 @@ class RoPE(Layer):
             x_even = dout[..., ::2]
             x_odd = dout[..., 1::2]
 
-            '''
+            """
             x_2i contributes to the even term by cos(m_theta_i) & odd term by sin(m_theta_i);
             hence the backward is just accumulating the derivatives of these terms along with
             the respective dout gradients.
             
             since form is y = a*x; gradients flow as is scaled by the respective sin/cos terms.
-            '''
+            """
 
             out_even = x_even * cache.cos_theta + x_odd * cache.sin_theta
             out_odd = -x_even * cache.sin_theta + x_odd * cache.cos_theta

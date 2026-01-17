@@ -52,7 +52,9 @@ class SwiGLU(Layer):
             y_preact = y_up * gate_act
             y = y_preact @ w_down
 
-            return y, SwiGLUCache(X, w_up, w_gate, y_gate, gate_act, y_up, y_preact, w_down, swish_cache)
+            return y, SwiGLUCache(
+                X, w_up, w_gate, y_gate, gate_act, y_up, y_preact, w_down, swish_cache
+            )
 
         @staticmethod
         def backward(dout: np.ndarray, cache: SwiGLUCache) -> tuple[np.ndarray, ...]:
@@ -78,11 +80,13 @@ class SwiGLU(Layer):
 
             return dw_down, dw_up, dw_gate, dX
 
-
     class torch:
         @staticmethod
         def forward(
-            X: torch.Tensor, w_up: torch.Tensor, w_gate: torch.Tensor, w_down: torch.Tensor
+            X: torch.Tensor,
+            w_up: torch.Tensor,
+            w_gate: torch.Tensor,
+            w_down: torch.Tensor,
         ) -> torch.Tensor:
             y_gate = X @ w_gate
             y_up = X @ w_up
