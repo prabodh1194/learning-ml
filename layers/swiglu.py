@@ -109,7 +109,7 @@ if __name__ == "__main__":
     3nC^2 = 8C^2
     hence: n = 8/3
     """
-    hidden = int(8 * C / 3) * C
+    hidden = int(8 / 3) * C
 
     X = np.random.randn(B, T, C)
     w_up = np.random.randn(C, hidden)
