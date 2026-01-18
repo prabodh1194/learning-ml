@@ -43,7 +43,6 @@ class CE(LossFunction):
             Spoiler: it all collapses to (p - t) / n
             """
             n_samples = targets.shape[0]
-            n_classes = targets.shape[1]
             logits = predictions
 
             # ==================== FORWARD (recompute for backprop) ====================

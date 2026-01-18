@@ -11,8 +11,6 @@ import mlx.core as mx
 import numpy as np
 import torch
 
-from layers.base import test_layer_linear
-
 
 @dataclass
 class SoftmaxCache:

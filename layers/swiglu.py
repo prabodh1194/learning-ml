@@ -12,7 +12,7 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 
-from layers.base import Layer, LayerGradients
+from layers.base import Layer
 from layers.swish import SwishCache, Swish
 
 

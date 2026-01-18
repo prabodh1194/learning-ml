@@ -16,10 +16,10 @@ class BCE(LossFunction):
     class np:
         @staticmethod
         def forward(predictions: np.ndarray, targets: np.ndarray) -> float:
-            l = (
+            loss = (
                 targets * np.log(predictions) + (1 - targets) * np.log(1 - predictions)
             ).sum()
-            return -l / targets.size
+            return -loss / targets.size
 
         @staticmethod
         def backward(predictions: np.ndarray, targets: np.ndarray) -> np.ndarray:
@@ -29,10 +29,10 @@ class BCE(LossFunction):
     class mlx:
         @staticmethod
         def forward(predictions: mx.array, targets: mx.array) -> float:
-            l = (
+            loss = (
                 targets * mx.log(predictions) + (1 - targets) * mx.log(1 - predictions)
             ).sum()
-            return -l / targets.size
+            return -loss / targets.size
 
         @staticmethod
         def backward(predictions: mx.array, targets: mx.array) -> mx.array:

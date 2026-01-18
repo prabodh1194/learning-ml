@@ -60,7 +60,7 @@ def benchmark_scale():
         )
 
         t0 = time.perf_counter()
-        out_pt = MultiHeadAttention.torch.forward(
+        MultiHeadAttention.torch.forward(
             torch.chunk(Q_pt, num_heads, dim=-1),
             torch.chunk(K_pt, num_heads, dim=-1),
             torch.chunk(V_pt, num_heads, dim=-1),
@@ -150,7 +150,7 @@ def benchmark_transformer(num_blocks: int = 96):
     # PyTorch: N blocks
     t0 = time.perf_counter()
     for _ in range(num_blocks):
-        out_pt = MultiHeadAttention.torch.forward(
+        MultiHeadAttention.torch.forward(
             torch.chunk(Q_pt, num_heads, dim=-1),
             torch.chunk(K_pt, num_heads, dim=-1),
             torch.chunk(V_pt, num_heads, dim=-1),
@@ -171,8 +171,8 @@ def benchmark_transformer(num_blocks: int = 96):
     print(f"MLX (parallel reshape):   {mlx_time:.2f}s")
 
     print()
-    print(f"MLX vs NumPy:   {np_time/mlx_time:.1f}x faster")
-    print(f"MLX vs PyTorch: {pt_time/mlx_time:.1f}x faster")
+    print(f"MLX vs NumPy:   {np_time / mlx_time:.1f}x faster")
+    print(f"MLX vs PyTorch: {pt_time / mlx_time:.1f}x faster")
 
 
 if __name__ == "__main__":

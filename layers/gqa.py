@@ -192,12 +192,12 @@ def test_inference(model, X, expected_cache_shape: tuple, name: str):
     out, cache = model.inference(X)
     B, T, C = X.shape
     assert out.shape == (B, T, C), f"{name} inference output mismatch: {out.shape}"
-    assert (
-        cache[0].shape == expected_cache_shape
-    ), f"{name} K cache mismatch: {cache[0].shape}"
-    assert (
-        cache[1].shape == expected_cache_shape
-    ), f"{name} V cache mismatch: {cache[1].shape}"
+    assert cache[0].shape == expected_cache_shape, (
+        f"{name} K cache mismatch: {cache[0].shape}"
+    )
+    assert cache[1].shape == expected_cache_shape, (
+        f"{name} V cache mismatch: {cache[1].shape}"
+    )
     print(f"✓ {name} inference: output={out.shape}, K_cache={cache[0].shape}")
     return cache
 
@@ -210,12 +210,12 @@ def test_cached_inference(model, cache, B, C, expected_cache_shape: tuple, name:
         1,
         C,
     ), f"{name} cached inference output mismatch: {out.shape}"
-    assert (
-        cache2[0].shape == expected_cache_shape
-    ), f"{name} K cache after append mismatch: {cache2[0].shape}"
-    assert (
-        cache2[1].shape == expected_cache_shape
-    ), f"{name} V cache after append mismatch: {cache2[1].shape}"
+    assert cache2[0].shape == expected_cache_shape, (
+        f"{name} K cache after append mismatch: {cache2[0].shape}"
+    )
+    assert cache2[1].shape == expected_cache_shape, (
+        f"{name} V cache after append mismatch: {cache2[1].shape}"
+    )
     print(f"✓ {name} cached inference: output={out.shape}, K_cache={cache2[0].shape}")
 
 
@@ -255,9 +255,9 @@ if __name__ == "__main__":
     test_forward(gqa, X, "GQA")
 
     # Verify KV weights are smaller (GQA-specific)
-    assert gqa.W_q.weight.shape == (512, 512), f"W_q shape mismatch"
-    assert gqa.W_k.weight.shape == (128, 512), f"W_k shape mismatch"
-    assert gqa.W_v.weight.shape == (128, 512), f"W_v shape mismatch"
+    assert gqa.W_q.weight.shape == (512, 512), "W_q shape mismatch"
+    assert gqa.W_k.weight.shape == (128, 512), "W_k shape mismatch"
+    assert gqa.W_v.weight.shape == (128, 512), "W_v shape mismatch"
     print(
         f"✓ GQA weight sizes: W_q={gqa.W_q.weight.shape}, W_k={gqa.W_k.weight.shape}, W_v={gqa.W_v.weight.shape}"
     )

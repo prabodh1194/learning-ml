@@ -101,22 +101,22 @@ def test_loss(
     # Assertions
     grad_pt = pred_pt.grad.numpy()
 
-    assert np.allclose(
-        grad_np, grad_pt, rtol=rtol, atol=atol
-    ), f"NumPy grad mismatch!\n  Expected: {grad_pt}\n  Got: {grad_np}"
+    assert np.allclose(grad_np, grad_pt, rtol=rtol, atol=atol), (
+        f"NumPy grad mismatch!\n  Expected: {grad_pt}\n  Got: {grad_np}"
+    )
     print("✓ NumPy gradients match PyTorch!")
 
     if mlx_implemented:
-        assert np.allclose(
-            np.asarray(grad_mlx), grad_pt, rtol=rtol, atol=atol
-        ), f"MLX grad mismatch!\n  Expected: {grad_pt}\n  Got: {np.asarray(grad_mlx)}"
+        assert np.allclose(np.asarray(grad_mlx), grad_pt, rtol=rtol, atol=atol), (
+            f"MLX grad mismatch!\n  Expected: {grad_pt}\n  Got: {np.asarray(grad_mlx)}"
+        )
         print("✓ MLX gradients match PyTorch!")
 
-    assert np.allclose(
-        loss_np, loss_pt.item(), rtol=rtol, atol=atol
-    ), f"NumPy loss mismatch!"
+    assert np.allclose(loss_np, loss_pt.item(), rtol=rtol, atol=atol), (
+        "NumPy loss mismatch!"
+    )
     if mlx_implemented:
-        assert np.allclose(
-            float(loss_mlx), loss_pt.item(), rtol=rtol, atol=atol
-        ), f"MLX loss mismatch!"
+        assert np.allclose(float(loss_mlx), loss_pt.item(), rtol=rtol, atol=atol), (
+            "MLX loss mismatch!"
+        )
     print("✓ All losses match!")

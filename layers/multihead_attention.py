@@ -196,14 +196,14 @@ if __name__ == "__main__":
         W,
     )
     t1 = time.perf_counter()
-    print(f"numpy forward: {(t1-t0)*1000:.2f}ms")
+    print(f"numpy forward: {(t1 - t0) * 1000:.2f}ms")
 
     # numpy backward
     dout = np.random.randn(B, T, C)
     t0 = time.perf_counter()
     dQ_np, dK_np, dV_np, dW_np = MultiHeadAttention.np.backward(dout, cache)
     t1 = time.perf_counter()
-    print(f"numpy backward: {(t1-t0)*1000:.2f}ms")
+    print(f"numpy backward: {(t1 - t0) * 1000:.2f}ms")
 
     # pt
     Q_pt = torch.tensor(Q, requires_grad=True)
@@ -220,13 +220,13 @@ if __name__ == "__main__":
         W_pt,
     )
     t1 = time.perf_counter()
-    print(f"torch forward: {(t1-t0)*1000:.2f}ms")
+    print(f"torch forward: {(t1 - t0) * 1000:.2f}ms")
 
     # pytorch backward
     t0 = time.perf_counter()
     out_pt.backward(torch.from_numpy(dout))
     t1 = time.perf_counter()
-    print(f"torch backward: {(t1-t0)*1000:.2f}ms")
+    print(f"torch backward: {(t1 - t0) * 1000:.2f}ms")
 
     # mlx
     Q_mx = mx.array(Q)
@@ -239,7 +239,7 @@ if __name__ == "__main__":
     out_mx = MultiHeadAttention.mlx.forward(Q_mx, K_mx, V_mx, W_mx, num_heads)
     mx.eval(out_mx)  # force evaluation
     t1 = time.perf_counter()
-    print(f"mlx forward: {(t1-t0)*1000:.2f}ms")
+    print(f"mlx forward: {(t1 - t0) * 1000:.2f}ms")
 
     print()
     print("Q", np.allclose(dQ_np, Q_pt.grad.numpy()))
