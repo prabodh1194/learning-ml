@@ -57,7 +57,9 @@ class RMSNorm(Layer):
 
     class torch:
         @staticmethod
-        def forward(X: torch.Tensor, gamma: torch.Tensor, eps: float = 1e-6) -> torch.Tensor:
+        def forward(
+            X: torch.Tensor, gamma: torch.Tensor, eps: float = 1e-6
+        ) -> torch.Tensor:
             return torch.nn.functional.rms_norm(X, gamma.shape, gamma, eps)
 
 

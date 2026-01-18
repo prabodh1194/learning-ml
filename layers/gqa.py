@@ -52,7 +52,9 @@ class MultiHeadAttention:
 
         return self.W_o(out)
 
-    def inference(self, X: torch.Tensor, kv_cache: tuple[torch.Tensor, torch.Tensor] | None = None):
+    def inference(
+        self, X: torch.Tensor, kv_cache: tuple[torch.Tensor, torch.Tensor] | None = None
+    ):
         """
         X - (B, 1, C) if X is single token
         else,
@@ -132,7 +134,9 @@ class GroupedQueryAttention:
 
         return self.W_o(out)
 
-    def inference(self, X: torch.Tensor, kv_cache: tuple[torch.Tensor, torch.Tensor] | None=None):
+    def inference(
+        self, X: torch.Tensor, kv_cache: tuple[torch.Tensor, torch.Tensor] | None = None
+    ):
         B, T, C = X.shape
 
         # T is 1 when kv_cache is being passed, else it is the full input
@@ -188,8 +192,12 @@ def test_inference(model, X, expected_cache_shape: tuple, name: str):
     out, cache = model.inference(X)
     B, T, C = X.shape
     assert out.shape == (B, T, C), f"{name} inference output mismatch: {out.shape}"
-    assert cache[0].shape == expected_cache_shape, f"{name} K cache mismatch: {cache[0].shape}"
-    assert cache[1].shape == expected_cache_shape, f"{name} V cache mismatch: {cache[1].shape}"
+    assert (
+        cache[0].shape == expected_cache_shape
+    ), f"{name} K cache mismatch: {cache[0].shape}"
+    assert (
+        cache[1].shape == expected_cache_shape
+    ), f"{name} V cache mismatch: {cache[1].shape}"
     print(f"✓ {name} inference: output={out.shape}, K_cache={cache[0].shape}")
     return cache
 
@@ -197,9 +205,17 @@ def test_inference(model, X, expected_cache_shape: tuple, name: str):
 def test_cached_inference(model, cache, B, C, expected_cache_shape: tuple, name: str):
     X_new = torch.randn(B, 1, C)
     out, cache2 = model.inference(X_new, cache)
-    assert out.shape == (B, 1, C), f"{name} cached inference output mismatch: {out.shape}"
-    assert cache2[0].shape == expected_cache_shape, f"{name} K cache after append mismatch: {cache2[0].shape}"
-    assert cache2[1].shape == expected_cache_shape, f"{name} V cache after append mismatch: {cache2[1].shape}"
+    assert out.shape == (
+        B,
+        1,
+        C,
+    ), f"{name} cached inference output mismatch: {out.shape}"
+    assert (
+        cache2[0].shape == expected_cache_shape
+    ), f"{name} K cache after append mismatch: {cache2[0].shape}"
+    assert (
+        cache2[1].shape == expected_cache_shape
+    ), f"{name} V cache after append mismatch: {cache2[1].shape}"
     print(f"✓ {name} cached inference: output={out.shape}, K_cache={cache2[0].shape}")
 
 
@@ -221,7 +237,9 @@ if __name__ == "__main__":
 
     test_forward(mha, X, "MHA")
     cache = test_inference(mha, X, expected_cache_shape=(2, 8, 64, 64), name="MHA")
-    test_cached_inference(mha, cache, B=2, C=512, expected_cache_shape=(2, 8, 65, 64), name="MHA")
+    test_cached_inference(
+        mha, cache, B=2, C=512, expected_cache_shape=(2, 8, 65, 64), name="MHA"
+    )
 
     mha = MultiHeadAttention(C=512, num_heads=8)
     test_generate(mha, prompt_len=100, num_tokens=50, C=512, name="MHA")
@@ -240,11 +258,15 @@ if __name__ == "__main__":
     assert gqa.W_q.weight.shape == (512, 512), f"W_q shape mismatch"
     assert gqa.W_k.weight.shape == (128, 512), f"W_k shape mismatch"
     assert gqa.W_v.weight.shape == (128, 512), f"W_v shape mismatch"
-    print(f"✓ GQA weight sizes: W_q={gqa.W_q.weight.shape}, W_k={gqa.W_k.weight.shape}, W_v={gqa.W_v.weight.shape}")
+    print(
+        f"✓ GQA weight sizes: W_q={gqa.W_q.weight.shape}, W_k={gqa.W_k.weight.shape}, W_v={gqa.W_v.weight.shape}"
+    )
 
     # GQA cache uses num_kv_head (8), d_head=16
     cache = test_inference(gqa, X, expected_cache_shape=(2, 8, 64, 16), name="GQA")
-    test_cached_inference(gqa, cache, B=2, C=512, expected_cache_shape=(2, 8, 65, 16), name="GQA")
+    test_cached_inference(
+        gqa, cache, B=2, C=512, expected_cache_shape=(2, 8, 65, 16), name="GQA"
+    )
 
     gqa = GroupedQueryAttention(C=512, num_head=32, num_kv_head=8)
     test_generate(gqa, prompt_len=100, num_tokens=50, C=512, name="GQA")
@@ -264,8 +286,12 @@ if __name__ == "__main__":
     gqa_cache_size = 2 * gqa_kv_heads * seq_len * d_head  # K + V
 
     print(f"Sequence length: {seq_len}")
-    print(f"MHA cache: {mha_heads} heads x {seq_len} x {d_head} x 2 = {mha_cache_size:,} values")
-    print(f"GQA cache: {gqa_kv_heads} heads x {seq_len} x {d_head} x 2 = {gqa_cache_size:,} values")
+    print(
+        f"MHA cache: {mha_heads} heads x {seq_len} x {d_head} x 2 = {mha_cache_size:,} values"
+    )
+    print(
+        f"GQA cache: {gqa_kv_heads} heads x {seq_len} x {d_head} x 2 = {gqa_cache_size:,} values"
+    )
     print(f"GQA saves: {mha_cache_size / gqa_cache_size:.0f}x smaller cache!")
 
     print()
