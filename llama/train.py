@@ -119,5 +119,10 @@ if __name__ == "__main__":
 
     prompt = "ROMEO:"
     prompt_tokens = torch.tensor([dataset.encode(prompt)]).to(device)
-    output = model.generate(prompt_tokens, max_new_tokens=100, temperature=0.8)
-    print(dataset.decode(output[0].tolist()))
+    print(prompt, end="", flush=True)
+    model.generate(
+        prompt_tokens,
+        max_new_tokens=100,
+        temperature=0.8,
+        decode_fn=lambda i: dataset.itos[i],
+    )

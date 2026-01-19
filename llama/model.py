@@ -24,6 +24,7 @@ class LLaMA(nn.Module):
         num_kv_head: int,
     ):
         super().__init__()
+        self.context_length = context_length
 
         # project (B, T) -> (B, T, C)
         self.embed = nn.Embedding(vocab_size, dim)
@@ -75,26 +76,14 @@ class LLaMA(nn.Module):
         return result  # (B, 1)
 
     @torch.inference_mode()
-    def generate(
-        self, prompt_tokens: torch.Tensor, max_new_tokens: int, temperature: float = 1.0
-    ) -> torch.Tensor:
-        # prompt = (B, T)
-        # logits = (B, T, vocab_size)
-        # prefill
-        start_pos = prompt_tokens.shape[-1]
-
-        logits, kv_caches = self.forward(prompt_tokens)
-
-        last_token = logits[:, -1, :]
-        next_token = self._sample(last_token, temperature)
-        tokens = [next_token.squeeze(-1)]
-
-        for i in range(1, max_new_tokens):
-            logits, kv_caches = self.forward(next_token, start_pos, kv_caches)
-            start_pos += 1
-
-            last_token = logits[:, -1, :]
-            next_token = self._sample(last_token, temperature)
-            tokens.append(next_token.squeeze(-1))
-
-        return torch.cat(tokens, dim=-1)
+    def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None):
+        for _ in range(max_new_tokens):
+            idx_cond = idx[:, -self.context_length :]  # slide window
+            logits, _ = self.forward(idx_cond)
+            next_token = self._sample(logits[:, -1, :], temperature)
+            idx = torch.cat([idx, next_token], dim=1)
+            if decode_fn:
+                print(decode_fn(next_token[0].item()), end="", flush=True)
+        if decode_fn:
+            print()
+        return idx[:, -max_new_tokens:]
