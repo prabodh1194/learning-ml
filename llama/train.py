@@ -68,9 +68,10 @@ def train(
 
             total_loss += loss.item()
 
-            logger.info(
-                f"[{epoch + 1}] [{batch_idx + 1}/{total_batches}] loss: {loss.item():.4f}"
-            )
+            if batch_idx % 10 == 0:
+                logger.info(
+                    f"[{epoch + 1}] [{batch_idx + 1}/{total_batches}] loss: {loss.item():.4f}"
+                )
 
         avg_loss = total_loss / len(loader)
         epoch_time = time.time() - epoch_start
@@ -83,24 +84,29 @@ def train(
 if __name__ == "__main__":
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
+    # hyperparams:
+    B = 32
+    T = 64
+    C = 128
+
     with open("data/tinyshakespeare/input.txt") as f:
         text = f.read()
 
-    # this is T
-    dataset = CharDataset(text, block_size=64)
+    # this is T = 64
+    dataset = CharDataset(text, block_size=T)
 
     # C is going to be 32 * 4 = 128
     model = LLaMA(
         n_layers=12,
         vocab_size=dataset.vocab_size,
-        dim=128,
+        dim=C,
         max_seq_len=64,
         num_head=4,
         num_kv_head=2,
     ).to(device)
 
     # B = 32
-    train(model, dataset, device, batch_size=32)
+    train(model, dataset, device, batch_size=B)
 
     prompt = "ROMEO:"
     prompt_tokens = torch.tensor([dataset.encode(prompt)]).to(device)
