@@ -72,7 +72,7 @@ class LLaMA(nn.Module):
     @torch.inference_mode()
     def generate(
         self, prompt_tokens: torch.Tensor, max_new_tokens: int, temperature: float = 1.0
-    ):
+    ) -> torch.Tensor:
         # prompt = (B, T)
         # logits = (B, T, vocab_size)
         # prefill
