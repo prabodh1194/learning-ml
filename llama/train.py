@@ -69,7 +69,7 @@ def train(
 
             total_loss += loss.item()
 
-            if batch_idx % 10 == 0:
+            if batch_idx % 100 == 0:
                 logger.info(
                     f"[{epoch + 1}] [{batch_idx + 1}/{total_batches}] loss: {loss.item():.4f}"
                 )
@@ -77,6 +77,10 @@ def train(
         avg_loss = total_loss / len(loader)
         epoch_time = time.time() - epoch_start
         logger.info(f"Epoch {epoch + 1}, loss: {avg_loss:.4f}, time: {epoch_time:.2f}s")
+
+        # save checkpoint
+        torch.save(model.state_dict(), f"checkpoints/epoch_{epoch + 1}.pt")
+        logger.info(f"Saved checkpoint: checkpoints/epoch_{epoch + 1}.pt")
 
     total_time = time.time() - train_start
     logger.info(f"Training complete in {total_time:.2f}s")
@@ -86,7 +90,7 @@ if __name__ == "__main__":
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
     # hyperparams:
-    B = 128
+    B = 256
     T = 64
     C = 128
     context_length = 64
