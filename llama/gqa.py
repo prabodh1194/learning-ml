@@ -35,16 +35,12 @@ class GQA(nn.Module):
     ) -> tuple[torch.Tensor, tuple[torch.Tensor, torch.Tensor]]:
         B, T, C = X.shape
 
-        Q = (
-            self.rope(self.W_q(X), start_pos)
-            .view(B, T, self.num_head, -1)
-            .transpose(1, 2)
+        Q = self.rope(self.W_q(X).view(B, T, self.num_head, -1), start_pos).transpose(
+            1, 2
         )  # B, num_head, T, d_head
-        K_new = (
-            self.rope(self.W_k(X), start_pos)
-            .view(B, T, self.num_kv_head, -1)
-            .transpose(1, 2)
-        )  # B, kv_head, T, d_head
+        K_new = self.rope(
+            self.W_k(X).view(B, T, self.num_kv_head, -1), start_pos
+        ).transpose(1, 2)  # B, kv_head, T, d_head
         V_new = (
             self.W_v(X).view(B, T, self.num_kv_head, -1).transpose(1, 2)
         )  # B, kv_head, T, d_head

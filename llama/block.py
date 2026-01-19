@@ -22,7 +22,8 @@ class LLaMABlock(nn.Module):
         self.dim = dim
         self.max_seq_len = max_seq_len
 
-        self.rope = RoPE(dim, max_seq_len)
+        # rope works on Q, K, V heads whose dim is standard.
+        self.rope = RoPE(dim // num_head, max_seq_len)
 
         self.attn_norm = RMSNorm(dim)
         self.attn = GQA(self.rope, dim, num_head, num_kv_head)

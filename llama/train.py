@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 import time
 
-from llama.llama import LLaMA
+from llama.model import LLaMA
 
 
 class CharDataset(Dataset):
@@ -53,6 +53,7 @@ def train(
         epoch_start = time.time()
         total_loss = 0
         for x, y in loader:
+            # x is B, T
             logits, _ = model(x)
 
             # logits is B, T, C
@@ -78,8 +79,10 @@ if __name__ == "__main__":
     with open("data/tinyshakespeare/input.txt") as f:
         text = f.read()
 
+    # this is T
     dataset = CharDataset(text, block_size=64)
 
+    # C is going to be 32 * 4 = 128
     model = LLaMA(
         n_layers=12,
         vocab_size=dataset.vocab_size,
@@ -89,7 +92,8 @@ if __name__ == "__main__":
         num_kv_head=2,
     )
 
-    train(model, dataset)
+    # B = 32
+    train(model, dataset, batch_size=32)
 
     prompt = "ROMEO:"
     prompt_tokens = torch.tensor([dataset.encode(prompt)])  # (1, T); B = 1
