@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, Dataset
 import torch.nn.functional as F
 import time
 
+from llama import logger
 from llama.model import LLaMA
 
 
@@ -47,18 +48,16 @@ def train(
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+    total_batches = len(loader)
+
+    logger.info(f"Training: {total_batches} batches/epoch")
 
     train_start = time.time()
     for epoch in range(epochs):
         epoch_start = time.time()
         total_loss = 0
-        for x, y in loader:
-            # x is B, T
+        for batch_idx, (x, y) in enumerate(loader):
             logits, _ = model(x)
-
-            # logits is B, T, C
-            # y is B, T
-            # ce works on logits - (N, C) & y - (N, )
             loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), y.view(-1))
 
             optimizer.zero_grad()
@@ -67,12 +66,16 @@ def train(
 
             total_loss += loss.item()
 
+            logger.info(
+                f"[{epoch + 1}] [{batch_idx + 1}/{total_batches}] loss: {loss.item():.4f}"
+            )
+
         avg_loss = total_loss / len(loader)
         epoch_time = time.time() - epoch_start
-        print(f"Epoch {epoch + 1}, loss: {avg_loss:.4f}, time: {epoch_time:.2f}s")
+        logger.info(f"Epoch {epoch + 1}, loss: {avg_loss:.4f}, time: {epoch_time:.2f}s")
 
     total_time = time.time() - train_start
-    print(f"Training complete in {total_time:.2f}s")
+    logger.info(f"Training complete in {total_time:.2f}s")
 
 
 if __name__ == "__main__":
