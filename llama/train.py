@@ -86,11 +86,13 @@ if __name__ == "__main__":
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
     # hyperparams:
-    B = 32
+    B = 128
     T = 64
     C = 128
     context_length = 64
     torch.manual_seed(42)
+
+    assert context_length >= T, "context length must always be larger than T"
 
     with open("../data/tinyshakespeare/input.txt") as f:
         text = f.read()
@@ -100,7 +102,7 @@ if __name__ == "__main__":
 
     # C is going to be 32 * 4 = 128
     model = LLaMA(
-        n_layers=12,
+        n_layers=6,
         vocab_size=dataset.vocab_size,
         dim=C,
         context_length=context_length,
