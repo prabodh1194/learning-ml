@@ -17,13 +17,14 @@ class LLaMABlock(nn.Module):
              residual                        residual
     """
 
-    def __init__(self, dim: int, max_seq_len: int, num_head: int, num_kv_head: int):
+    def __init__(
+        self, *, dim: int, context_length: int, num_head: int, num_kv_head: int
+    ):
         super().__init__()
         self.dim = dim
-        self.max_seq_len = max_seq_len
 
         # rope works on Q, K, V heads whose dim is standard.
-        self.rope = RoPE(dim // num_head, max_seq_len)
+        self.rope = RoPE(dim=dim // num_head, context_length=context_length)
 
         self.attn_norm = RMSNorm(dim)
         self.attn = GQA(self.rope, dim, num_head, num_kv_head)

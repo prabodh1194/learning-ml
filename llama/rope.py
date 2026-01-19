@@ -3,10 +3,10 @@ from torch import nn
 
 
 class RoPE(nn.Module):
-    def __init__(self, dim: int, max_seq_len: int, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *, dim: int, context_length: int):
+        super().__init__()
         theta = torch.tensor([int(1e4) ** (-2 * i / dim) for i in range(dim // 2)])
-        m = torch.arange(max_seq_len)
+        m = torch.arange(context_length)
         angles = torch.outer(m, theta)
 
         cos_theta = torch.cos(angles)

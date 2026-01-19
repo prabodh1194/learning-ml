@@ -19,7 +19,7 @@ class LLaMA(nn.Module):
         n_layers: int,
         vocab_size: int,
         dim: int,
-        max_seq_len: int,
+        context_length: int,
         num_head: int,
         num_kv_head: int,
     ):
@@ -30,7 +30,12 @@ class LLaMA(nn.Module):
 
         self.layers = nn.ModuleList(
             [
-                LLaMABlock(dim, max_seq_len, num_head, num_kv_head)
+                LLaMABlock(
+                    dim=dim,
+                    context_length=context_length,
+                    num_head=num_head,
+                    num_kv_head=num_kv_head,
+                )
                 for _ in range(n_layers)
             ]
         )

@@ -58,6 +58,7 @@ def train(
         epoch_start = time.time()
         total_loss = 0
         for batch_idx, (x, y) in enumerate(loader):
+            # x, y is (B, T)
             x, y = x.to(device), y.to(device)
             logits, _ = model(x)
             loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), y.view(-1))
@@ -88,8 +89,10 @@ if __name__ == "__main__":
     B = 32
     T = 64
     C = 128
+    context_length = 64
+    torch.manual_seed(42)
 
-    with open("data/tinyshakespeare/input.txt") as f:
+    with open("../data/tinyshakespeare/input.txt") as f:
         text = f.read()
 
     # this is T = 64
@@ -100,7 +103,7 @@ if __name__ == "__main__":
         n_layers=12,
         vocab_size=dataset.vocab_size,
         dim=C,
-        max_seq_len=64,
+        context_length=context_length,
         num_head=4,
         num_kv_head=2,
     ).to(device)
