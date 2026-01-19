@@ -59,7 +59,7 @@ class GQA(nn.Module):
         scores = Q @ K_i.transpose(-2, -1) / (K.shape[-1] ** 0.5)
 
         if T != 1:
-            mask = torch.tril(torch.ones(T, T))
+            mask = torch.tril(torch.ones(T, T)).to(scores.device)
             scores = scores.masked_fill(mask == 0, -torch.inf)
 
         attn = scores.softmax(dim=-1)

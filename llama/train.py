@@ -42,6 +42,7 @@ class CharDataset(Dataset):
 def train(
     model: nn.Module,
     dataset: CharDataset,
+    device: torch.device,
     epochs: int = 10,
     batch_size: int = 32,
     lr: float = 3e-4,
@@ -50,13 +51,14 @@ def train(
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
     total_batches = len(loader)
 
-    logger.info(f"Training: {total_batches} batches/epoch")
+    logger.info(f"Training on {device}: {total_batches} batches/epoch")
 
     train_start = time.time()
     for epoch in range(epochs):
         epoch_start = time.time()
         total_loss = 0
         for batch_idx, (x, y) in enumerate(loader):
+            x, y = x.to(device), y.to(device)
             logits, _ = model(x)
             loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), y.view(-1))
 
@@ -79,6 +81,8 @@ def train(
 
 
 if __name__ == "__main__":
+    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+
     with open("data/tinyshakespeare/input.txt") as f:
         text = f.read()
 
@@ -93,12 +97,12 @@ if __name__ == "__main__":
         max_seq_len=64,
         num_head=4,
         num_kv_head=2,
-    )
+    ).to(device)
 
     # B = 32
-    train(model, dataset, batch_size=32)
+    train(model, dataset, device, batch_size=32)
 
     prompt = "ROMEO:"
-    prompt_tokens = torch.tensor([dataset.encode(prompt)])  # (1, T); B = 1
+    prompt_tokens = torch.tensor([dataset.encode(prompt)]).to(device)
     output = model.generate(prompt_tokens, max_new_tokens=100, temperature=0.8)
     print(dataset.decode(output[0].tolist()))
