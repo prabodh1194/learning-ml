@@ -1,0 +1,142 @@
+Architecture Comparison: GPT-2 vs LLaMA vs DeepSeek
+====================================================
+
+GPT-2 / Standard Transformer Decoder
+-------------------------------------
+
+Input Tokens
+     |
++-------------------------------------+
+|  Embedding + Positional Encoding    |
++-------------------------------------+
+     |
++-------------------------------------+
+|         Decoder Block (x12)         |
+|  +-----------------------------+    |
+|  |      LayerNorm              |    |
+|  |          |                  |    |
+|  |   Multi-Head Attention      |<----- All heads same size
+|  |   (8 heads, causal mask)    |       Q, K, V all d_head
+|  |          |                  |    |
+|  |      + Residual             |    |
+|  +-----------------------------+    |
+|  +-----------------------------+    |
+|  |      LayerNorm              |    |
+|  |          |                  |    |
+|  |        FFN                  |<----- Single FFN for all tokens
+|  |   (Linear -> GELU -> Linear)|       d_model -> 4*d_model -> d_model
+|  |          |                  |    |
+|  |      + Residual             |    |
+|  +-----------------------------+    |
++-------------------------------------+
+     |
+   Output
+
+
+LLaMA
+-----
+
+Input Tokens
+     |
++-------------------------------------+
+|         Embedding (no pos enc)      |
++-------------------------------------+
+     |
++-------------------------------------+
+|         Decoder Block (x32)         |
+|  +-----------------------------+    |
+|  |      RMSNorm                |<----- Simpler than LayerNorm
+|  |          |                  |    |
+|  |   Grouped Query Attention   |<----- Fewer K,V heads than Q
+|  |   + RoPE (rotary pos emb)   |       Saves memory in KV cache
+|  |          |                  |    |
+|  |      + Residual             |    |
+|  +-----------------------------+    |
+|  +-----------------------------+    |
+|  |      RMSNorm                |    |
+|  |          |                  |    |
+|  |       SwiGLU                |<----- Gated FFN
+|  |   (Linear -> Swish -> Gate) |       Better than GELU
+|  |          |                  |    |
+|  |      + Residual             |    |
+|  +-----------------------------+    |
++-------------------------------------+
+     |
+   Output
+
+
+DeepSeek (MoE + MLA)
+--------------------
+
+Input Tokens
+     |
++-------------------------------------+
+|         Embedding                   |
++-------------------------------------+
+     |
++------------------------------------------------------+
+|              Decoder Block (x60)                     |
+|  +--------------------------------------------+      |
+|  |      RMSNorm                               |      |
+|  |          |                                 |      |
+|  |   Multi-head Latent Attention (MLA)        |<---- Compressed KV
+|  |   +-------------------------------------+  |      Low-rank projection
+|  |   | Q --> [compress] --> q_latent       |  |      Smaller KV cache
+|  |   | K,V --> [compress] --> kv_latent    |  |
+|  |   |        |                            |  |
+|  |   |   Attention on latent space         |  |
+|  |   |        |                            |  |
+|  |   |   [decompress] --> output           |  |
+|  |   +-------------------------------------+  |
+|  |          |                                 |
+|  |      + Residual                            |
+|  +--------------------------------------------+
+|  +--------------------------------------------+
+|  |      RMSNorm                               |
+|  |          |                                 |
+|  |   Mixture of Experts (MoE)                 |<---- Multiple FFNs
+|  |   +-------------------------------------+  |      Router picks top-k
+|  |   |     Router (learned)                |  |
+|  |   |         |                           |  |
+|  |   |  +---+ +---+ +---+     +---+        |  |
+|  |   |  |E1 | |E2 | |E3 | ... |E64|        |<---- 64-160 experts
+|  |   |  +-+-+ +---+ +-+-+     +---+        |  |
+|  |   |    |     X     |         X          |<---- Only top-k run (e.g., 6)
+|  |   |  +-----------------+                |  |
+|  |   |  | Weighted Sum    |                |  |
+|  |   |  +-----------------+                |  |
+|  |   +-------------------------------------+  |
+|  |          |                                 |
+|  |      + Residual                            |
+|  +--------------------------------------------+
++------------------------------------------------------+
+     |
+   Output
+
+
+Key Differences Summary
+-----------------------
+
+                    GPT-2          LLaMA           DeepSeek
+                    -----          -----           --------
+Norm                LayerNorm      RMSNorm         RMSNorm
+Position            Learned        RoPE            RoPE
+Attention           MHA            GQA             MLA (compressed)
+FFN                 GELU           SwiGLU          MoE (many experts)
+KV Cache            Full           Reduced (GQA)   Tiny (MLA)
+Params vs Compute   1:1            1:1             Many:Few
+
+
+Why These Changes?
+------------------
+
+GPT-2 -> LLaMA:
+- RMSNorm: Faster, no mean computation
+- RoPE: Better length generalization than learned positional embeddings
+- GQA: Reduces KV cache size (important for long contexts)
+- SwiGLU: Empirically better than GELU
+
+LLaMA -> DeepSeek:
+- MLA: Compresses KV into latent space, even smaller cache
+- MoE: More parameters but same compute (only top-k experts run)
+        Allows model to specialize different experts for different patterns
