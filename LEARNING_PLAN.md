@@ -1,8 +1,5 @@
 # ML Learning Plan
 
-## Current Focus
-**T10: GQA** → T11: LLaMA Assembly → Milestone 3
-
 ## Track Order
 1. LLAMA (Jan 17-19)
 2. VIT (Jan 20-25)
@@ -23,3 +20,4 @@
 | NLP | Word2Vec |
 | MLX | Apple Silicon |
 | ADVANCED | LoRA, pruning, quantization |
+| PAPERS | Research paper reading |

@@ -23,8 +23,8 @@ if __name__ == "__main__":
 
     np.random.seed(42)
 
-    init_param = np.random.randn(5).astype(np.float64)
-    init_grad = np.random.randn(5).astype(np.float64)
+    init_param = np.random.randn(5).astype(np.float32)
+    init_grad = np.random.randn(5).astype(np.float32)
 
     param_np = init_param.copy()
     opt_np = SGD.np(lr=lr, momentum=momentum)
