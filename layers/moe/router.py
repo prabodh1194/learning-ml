@@ -25,7 +25,7 @@ class MOERouter:
 
 if __name__ == "__main__":
     B, T, C = 4, 8, 10
-    num_experts = 5
+    num_experts = 4
 
     X_np = np.random.randn(B, T, C)
     W_router_np = np.random.randn(num_experts, C)
