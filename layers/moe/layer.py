@@ -1,3 +1,5 @@
+from pprint import pprint
+
 import torch
 from torch import nn
 
@@ -29,7 +31,30 @@ class MOELayer(nn.Module):
             )
             output[tokens_mask] += out
 
+        stats = self.get_load_balance_stats(expert_indices)
+
+        pprint(stats)
+
         return output
+
+    def get_load_balance_stats(self, expert_indices: torch.Tensor) -> dict:
+        # Count how many tokens each expert got
+        # Return dict with metrics
+        counts = []
+        for expert_idx in range(self.num_experts):
+            mask = expert_indices == expert_idx
+            tokens_mask = mask.any(dim=-1)
+            counts.append(tokens_mask.sum().item())
+
+        counts = torch.tensor(counts, dtype=torch.float)
+        means = counts.mean()
+        stds = counts.std()
+
+        return {
+            "expert_counts": counts.tolist(),
+            "cv": (stds / means).item() if means > 0 else 0,
+            "load_imbalance": (counts.max() / means).item() if means > 0 else 0,
+        }
 
 
 if __name__ == "__main__":
