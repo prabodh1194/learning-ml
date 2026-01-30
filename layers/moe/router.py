@@ -6,7 +6,7 @@ from torch import nn
 class MOERouter(nn.Module):
     def __init__(self, num_experts: int, C: int):
         super().__init__()
-        self.W = torch.randn(num_experts, C, requires_grad=True)
+        self.W = nn.Parameter(torch.randn(num_experts, C))
 
     def forward(self, X: torch.Tensor):
         """
