@@ -16,8 +16,10 @@ class MOELayer(nn.Module):
         self.router = MOERouter(num_experts, dim)
         self.experts = ExpertArray(num_experts, dim)
 
-    def forward(self, X: torch.Tensor):
+    def forward(self, X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         expert_weights, expert_indices = self.router.forward(X)
+        aux_loss = self.router.compute_aux_loss(expert_weights, expert_indices)
+
         B, T, C = X.shape
         output = torch.zeros(B, T, C)
 
@@ -35,7 +37,7 @@ class MOELayer(nn.Module):
 
         pprint(stats)
 
-        return output
+        return output, aux_loss
 
     def get_load_balance_stats(self, expert_indices: torch.Tensor) -> dict:
         # Count how many tokens each expert got
@@ -65,13 +67,14 @@ if __name__ == "__main__":
     layer = MOELayer(num_experts=8, dim=C)
 
     X = torch.randn(B, T, C, requires_grad=True)
-    out = layer.forward(X)
+    out, aux_loss = layer.forward(X)
 
     print(f"  Shape preserved: {out.shape == X.shape}")
     print(f"  Output shape: {out.shape}")
 
     # Gradient test
-    loss = out.sum()
+    loss = out.sum() + aux_loss * 0.01
+
     loss.backward()
     print(f"  Gradients flow: {X.grad is not None}")
 

@@ -37,6 +37,17 @@ class MOERouter(nn.Module):
         f_i = fraction of tokens working with the expert i.
         P_i = probability mass for the expert i.
               probability mass is (sum of all weights for expert i) / (total_tokens * top_k)
+
+        The `f` terms is a simple probability that an expert is selected. P shows how confidently was it selected.
+        The loss term looks to penalize high confidence selections of an expert & supports low confidence selections.
+
+        in an ideal case; every expert has equal probability & confidence of selection.
+
+        hence; f = 1/N ; P = 1/N where N is the number of experts.
+        hence aux_loss = sum(1 / N^2) = N * (1 / N^2) = 1 / N
+
+        since for large N; aux_loss will reduce.
+        To keep the loss as 1.0; we can multiply by N.
         """
 
         B, T, K = expert_weights.shape
