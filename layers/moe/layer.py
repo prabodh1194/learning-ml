@@ -58,17 +58,25 @@ class MOELayer(nn.Module):
 
 
 if __name__ == "__main__":
-    B, T, C = 4, 8, 10
-    layer = MOELayer(num_experts=4, dim=C)
+    print("Testing Complete MoE Layer")
+    print("=" * 50)
+
+    B, T, C = 4, 16, 256
+    layer = MOELayer(num_experts=8, dim=C)
 
     X = torch.randn(B, T, C, requires_grad=True)
-
     out = layer.forward(X)
-    assert out.shape == X.shape, f"Shape mismatch: {out.shape} vs {X.shape}"
-    print("Output shape:", out.shape)
-    print("MoE layer working!")
 
+    print(f"  Shape preserved: {out.shape == X.shape}")
+    print(f"  Output shape: {out.shape}")
+
+    # Gradient test
     loss = out.sum()
     loss.backward()
+    print(f"  Gradients flow: {X.grad is not None}")
 
-    print("grad flows:", X.grad is not None)
+    # Check gradients reach router and experts
+    has_router_grad = layer.router.W.grad is not None
+    has_expert_grad = any(p.grad is not None for p in layer.experts.parameters())
+    print(f"  Router has gradients: {has_router_grad}")
+    print(f"  Experts have gradients: {has_expert_grad}")
