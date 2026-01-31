@@ -1,3 +1,61 @@
+"""
+                    Token X (B, T, C)
+                              │
+              ┌───────────────┼───────────────┐
+              │               │               │
+              ▼               ▼               ▼
+        ┌──────────┐    ┌──────────┐    ┌──────────┐
+        │ Shared   │    │ Shared   │    │  Router  │
+        │ Expert 0 │    │ Expert 1 │    │  (topK)  │
+        └────┬─────┘    └────┬─────┘    └────┬─────┘
+             │               │               │
+             │  ALL TOKENS   │          indices, weights
+             │               │               │
+             ▼               ▼               ▼
+        ┌─────────────────────┐    ┌─────────────────────────────┐
+        │   shared_output     │    │      Routed Dispatch        │
+        │   (dense path)      │    │    (sparse, top-K only)     │
+        └──────────┬──────────┘    └──────────────┬──────────────┘
+                   │                              │
+                   │     ┌────────────────────────┘
+                   │     │
+                   │     ▼
+                   │  ┌─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┐
+                   │  │ E0  │ E1  │ E2  │ E3  │ E4  │ E5  │ E6  │ E7  │
+                   │  └──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┴──┬──┘
+                   │     │     │     │     │     │     │     │     │
+                   │     └─────┴─────┴──┬──┴─────┴─────┴─────┴─────┘
+                   │                    │
+                   │                    ▼
+                   │              ┌───────────┐
+                   │              │  Weighted │
+                   │              │   Combine │
+                   │              └─────┬─────┘
+                   │                    │
+                   │                    ▼
+                   │            routed_output
+                   │              (sparse)
+                   │                    │
+                   └────────┬───────────┘
+                            │
+                            ▼
+                      ┌───────────┐
+                      │    ADD    │
+                      └─────┬─────┘
+                            │
+                            ▼
+                    Output (B, T, C)
+
+
+SHARED PATH (Dense):              ROUTED PATH (Sparse):
+─────────────────────             ─────────────────────
+• ALL tokens                      • Top-K experts per token
+• Always active                   • Gate-weighted outputs
+• Common patterns                 • Specialized patterns
+• 1-2 experts                     • 64-256 experts
+
+"""
+
 from pprint import pprint
 
 import torch
