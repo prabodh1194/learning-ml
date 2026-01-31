@@ -61,9 +61,14 @@ if __name__ == "__main__":
     B, T, C = 4, 8, 10
     layer = MOELayer(num_experts=4, dim=C)
 
-    X = torch.randn(B, T, C)
+    X = torch.randn(B, T, C, requires_grad=True)
 
     out = layer.forward(X)
     assert out.shape == X.shape, f"Shape mismatch: {out.shape} vs {X.shape}"
     print("Output shape:", out.shape)
     print("MoE layer working!")
+
+    loss = out.sum()
+    loss.backward()
+
+    print("grad flows:", X.grad is not None)

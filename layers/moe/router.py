@@ -4,9 +4,10 @@ from torch import nn
 
 
 class MOERouter(nn.Module):
-    def __init__(self, num_experts: int, C: int):
+    def __init__(self, num_experts: int, C: int, topk: int = 2):
         super().__init__()
         self.W = nn.Parameter(torch.randn(num_experts, C))
+        self.topk = topk
 
     def forward(self, X: torch.Tensor):
         """
@@ -19,7 +20,7 @@ class MOERouter(nn.Module):
         logits = X @ self.W.T
 
         scores = torch.softmax(logits, dim=-1)
-        experts = scores.topk(2, dim=-1)
+        experts = scores.topk(self.topk, dim=-1)
 
         return experts.values / experts.values.sum(
             dim=-1, keepdim=True
