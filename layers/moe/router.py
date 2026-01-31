@@ -50,9 +50,12 @@ class MOERouter(nn.Module):
         To keep the loss as 1.0; we can multiply by N.
         """
 
-        B, T, K = expert_weights.shape
+        *leading, K = expert_weights.shape
 
-        total_tokens = B * T
+        total_tokens = 1
+
+        for t in leading:
+            total_tokens *= t
 
         f_i = []
         p_i = []

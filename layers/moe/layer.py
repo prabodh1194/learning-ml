@@ -66,27 +66,52 @@ from layers.moe.router import MOERouter
 
 
 class MOELayer(nn.Module):
-    def __init__(self, num_shared_experts: int, num_routed_experts: int, dim: int):
+    def __init__(
+        self,
+        num_segments: int,
+        num_shared_experts: int,
+        num_routed_experts: int,
+        dim: int,
+    ):
         super().__init__()
+        self.num_segments = num_segments
         self.num_shared_experts = num_shared_experts
         self.num_routed_experts = num_routed_experts
         self.dim = dim
 
-        self.router = MOERouter(self.num_routed_experts, dim)
-
         self.shared_experts = nn.ModuleList(
-            list(map(lambda _: Expert(dim), range(num_shared_experts)))
+            list(map(lambda _: Expert(self.dim), range(num_shared_experts)))
         )
-        self.routed_experts = ExpertArray(self.num_routed_experts, dim)
+
+        self.router = MOERouter(self.num_routed_experts, self.dim // self.num_segments)
+        self.routed_experts = ExpertArray(
+            self.num_routed_experts, self.dim // self.num_segments
+        )
 
     def forward(self, X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        expert_weights, expert_indices = self.router.forward(X)
-        aux_loss = self.router.compute_aux_loss(expert_weights, expert_indices)
-
+        """ """
         B, T, C = X.shape
 
+        segments = X.view(B, T, self.num_segments, -1).transpose(1, 2)
+
+        shared_out, routed_out, aux_loss = self.segmented_forward(X, segments)
+
+        out = shared_out + routed_out.transpose(1, 2).view(B, T, C)
+
+        return out, aux_loss
+
+    def segmented_forward(
+        self, X: torch.Tensor, X_segment: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        X is segmented input
+        """
         shared_output = sum(expert(X) for expert in self.shared_experts)
-        routed_output = torch.zeros(B, T, C)
+
+        expert_weights, expert_indices = self.router.forward(X_segment)
+        aux_loss = self.router.compute_aux_loss(expert_weights, expert_indices)
+
+        routed_output = torch.zeros_like(X_segment)
 
         for expert_idx in range(self.num_routed_experts):
             # solve for; did a token pick this expert in any of its k slots?
@@ -94,7 +119,7 @@ class MOELayer(nn.Module):
             weights = expert_weights[mask]
             tokens_mask = mask.any(dim=-1)  # (B, T) true if a token picked this expert
             out = weights.unsqueeze(-1) * self.routed_experts.forward(
-                X[tokens_mask], expert_idx
+                X_segment[tokens_mask], expert_idx
             )
             routed_output[tokens_mask] += out
 
@@ -102,7 +127,7 @@ class MOELayer(nn.Module):
 
         pprint(stats)
 
-        return shared_output + routed_output, aux_loss
+        return shared_output, routed_output, aux_loss
 
     def get_load_balance_stats(self, expert_indices: torch.Tensor) -> dict:
         # Count how many tokens each expert got
@@ -129,7 +154,7 @@ if __name__ == "__main__":
     print("=" * 50)
 
     B, T, C = 4, 16, 256
-    layer = MOELayer(num_shared_experts=2, num_routed_experts=8, dim=C)
+    layer = MOELayer(num_segments=8, num_shared_experts=2, num_routed_experts=8, dim=C)
 
     X = torch.randn(B, T, C, requires_grad=True)
     out, aux_loss = layer.forward(X)
