@@ -6,9 +6,12 @@ from torch import nn
 class MOERouter(nn.Module):
     def __init__(self, num_experts: int, C: int, topk: int = 2):
         super().__init__()
-        self.W = nn.Parameter(torch.randn(num_experts, C))
+
         self.topk = topk
         self.num_experts = num_experts
+
+        self.W = nn.Parameter(torch.randn(self.num_experts, C))
+        self.expert_bias = nn.Parameter(torch.zeros(self.num_experts))
 
     def forward(self, X: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -18,7 +21,7 @@ class MOERouter(nn.Module):
         each token is supposed to be activated by few of the N "experts"
 
         """
-        logits = X @ self.W.T
+        logits = X @ self.W.T + self.expert_bias
 
         scores = torch.softmax(logits, dim=-1)
         experts = scores.topk(self.topk, dim=-1)

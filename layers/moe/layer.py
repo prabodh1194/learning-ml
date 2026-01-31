@@ -190,15 +190,17 @@ if __name__ == "__main__":
     print("  (CV < 0.1 = well balanced, load_imbalance = 1.0 = perfect)")
 
     # Gradient test
-    loss = out.sum() + aux_loss * 0.01
+    loss = out.sum()  # + aux_loss * 0.01
     loss.backward()
 
     has_router_grad = layer.router.W.grad is not None
     has_expert_grad = any(p.grad is not None for p in layer.routed_experts.parameters())
     has_shared_grad = all(p.grad is not None for p in layer.shared_experts.parameters())
+    has_bias_grad = layer.router.expert_bias.grad is not None
 
     print("\nGradient Flow:")
     print(f"  Input:          {X.grad is not None}")
     print(f"  Router:         {has_router_grad}")
+    print(f"  Router bias:    {has_bias_grad}")
     print(f"  Shared experts: {has_shared_grad}")
     print(f"  Routed experts: {has_expert_grad}")
