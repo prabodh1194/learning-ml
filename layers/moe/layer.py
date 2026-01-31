@@ -56,8 +56,6 @@ SHARED PATH (Dense):              ROUTED PATH (Sparse):
 
 """
 
-from pprint import pprint
-
 import torch
 from torch import nn
 
@@ -125,7 +123,8 @@ class MOELayer(nn.Module):
 
         stats = self.get_load_balance_stats(expert_indices)
 
-        pprint(stats)
+        print(f"  Expert counts: {stats['expert_counts']}")
+        print(f"  CV: {stats['cv']:.3f}, Load imbalance: {stats['load_imbalance']:.2f}")
 
         return shared_output, routed_output, aux_loss
 
@@ -153,26 +152,53 @@ if __name__ == "__main__":
     print("Testing Complete MoE Layer")
     print("=" * 50)
 
+    # Config
     B, T, C = 4, 16, 256
-    layer = MOELayer(num_segments=8, num_shared_experts=2, num_routed_experts=8, dim=C)
+    num_segments = 8
+    num_shared_experts = 2
+    num_routed_experts = 8
+    top_k = 2
+
+    print(f"\nConfig: B={B}, T={T}, C={C}")
+    print(
+        f"Segments: {num_segments}, Shared experts: {num_shared_experts}, Routed experts: {num_routed_experts}"
+    )
+    print(f"Segment dim: {C // num_segments}, Top-K: {top_k}")
+
+    layer = MOELayer(
+        num_segments=num_segments,
+        num_shared_experts=num_shared_experts,
+        num_routed_experts=num_routed_experts,
+        dim=C,
+    )
 
     X = torch.randn(B, T, C, requires_grad=True)
     out, aux_loss = layer.forward(X)
 
+    # Shape test
+    print("\nShape Test:")
+    print(f"  Input:  {X.shape}")
+    print(f"  Output: {out.shape}")
     print(f"  Shape preserved: {out.shape == X.shape}")
-    print(f"  Output shape: {out.shape}")
+
+    # Load balance explanation
+    total_routing_decisions = B * num_segments * T * top_k
+    print("\nLoad Balance Stats:")
+    print(
+        f"  Total routing decisions: {B} × {num_segments} × {T} × {top_k} = {total_routing_decisions}"
+    )
+    print("  (CV < 0.1 = well balanced, load_imbalance = 1.0 = perfect)")
 
     # Gradient test
     loss = out.sum() + aux_loss * 0.01
-
     loss.backward()
-    print(f"  Gradients flow: {X.grad is not None}")
 
-    # Check gradients reach router and experts
     has_router_grad = layer.router.W.grad is not None
     has_expert_grad = any(p.grad is not None for p in layer.routed_experts.parameters())
     has_shared_grad = all(p.grad is not None for p in layer.shared_experts.parameters())
-    print(f"  Shared experts have gradients: {has_shared_grad}")
 
-    print(f"  Router has gradients: {has_router_grad}")
-    print(f"  Experts have gradients: {has_expert_grad}")
+    print("\nGradient Flow:")
+    print(f"  Input:          {X.grad is not None}")
+    print(f"  Router:         {has_router_grad}")
+    print(f"  Shared experts: {has_shared_grad}")
+    print(f"  Routed experts: {has_expert_grad}")
