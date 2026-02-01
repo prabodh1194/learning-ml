@@ -89,3 +89,33 @@ class Deepseek(nn.Module):
         logits = self.lm_head(X)
 
         return logits, total_aux_loss, new_caches
+
+
+if __name__ == "__main__":
+    num_layers = 8
+
+    deepseek_model = Deepseek(
+        vocab_size=256,
+        dim=32,
+        dim_latent=8,
+        num_layers=num_layers,
+        num_heads=4,
+        context_length=10,
+        num_segments=8,
+        num_shared_experts=2,
+        num_routed_experts=8,
+    )
+
+    # forward pass (B = 2, T = 5)
+    tokens = torch.randint(0, 256, (2, 5))
+    logits, aux_loss, caches = deepseek_model(tokens, [None] * num_layers)
+
+    print("logits shape: ", logits.shape)
+    print("auxiliary loss: ", aux_loss)
+
+    # grad test
+    loss = logits.sum() + aux_loss * 0.01
+    print("loss: ", loss)
+    loss.backward()
+
+    print(f"Gradients flow: {deepseek_model.embedding.weight.grad is not None}")
