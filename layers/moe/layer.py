@@ -54,6 +54,25 @@ SHARED PATH (Dense):              ROUTED PATH (Sparse):
 • Common patterns                 • Specialized patterns
 • 1-2 experts                     • 64-256 experts
 
+Segmentation is needed to improve expert utilisation.
+
+Fine-Grained Expert Segmentation (DeepSeek-V2/V3 innovation):
+
+Standard MoE: Each token (dim=C) routes to top-K of N experts.
+Problem: Only K experts see each token, limiting expert diversity.
+
+Segmented MoE: Split token into M segments (each dim=C/M), route each segment independently.
+Result: Each token can access up to M × K different experts.
+
+Example (C=256, M=8 segments, K=2):
+  Standard: token → 2 experts
+  Segmented: 8 segments × 2 experts = up to 16 experts per token
+
+Benefits:
+  - Better expert utilization (more experts activated per token)
+  - Finer-grained routing decisions
+  - Smoother load balancing across experts
+
 """
 
 import torch

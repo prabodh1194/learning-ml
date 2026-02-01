@@ -89,35 +89,29 @@ def train(
 
 
 if __name__ == "__main__":
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    from training_config import LLaMAConfig
 
-    # hyperparams:
-    B = 256
-    T = 64
-    C = 128
-    context_length = 64
+    cfg = LLaMAConfig()
+    device = torch.device(cfg.device)
     torch.manual_seed(42)
 
-    assert context_length >= T, "context length must always be larger than T"
-
-    with open("../data/tinyshakespeare/input.txt") as f:
+    with open(cfg.data_path) as f:
         text = f.read()
 
-    # this is T = 64
-    dataset = CharDataset(text, block_size=T)
+    dataset = CharDataset(text, block_size=cfg.context_len)
 
-    # C is going to be 32 * 4 = 128
     model = LLaMA(
-        n_layers=6,
+        n_layers=cfg.n_layers,
         vocab_size=dataset.vocab_size,
-        dim=C,
-        context_length=context_length,
-        num_head=4,
-        num_kv_head=2,
+        dim=cfg.dim,
+        context_length=cfg.context_len,
+        num_head=cfg.num_head,
+        num_kv_head=cfg.num_kv_head,
     ).to(device)
 
-    # B = 32
-    train(model, dataset, device, batch_size=B)
+    train(
+        model, dataset, device, epochs=cfg.epochs, batch_size=cfg.batch_size, lr=cfg.lr
+    )
 
     prompt = "ROMEO:"
     prompt_tokens = torch.tensor([dataset.encode(prompt)]).to(device)
