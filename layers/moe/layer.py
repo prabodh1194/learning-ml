@@ -66,10 +66,11 @@ from layers.moe.router import MOERouter
 class MOELayer(nn.Module):
     def __init__(
         self,
+        *,
+        dim: int,
         num_segments: int,
         num_shared_experts: int,
         num_routed_experts: int,
-        dim: int,
     ):
         super().__init__()
         self.num_segments = num_segments
