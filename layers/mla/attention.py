@@ -45,9 +45,11 @@ import math
 import torch
 from torch import nn
 
+from llama.rope import RoPE
+
 
 class Attention(nn.Module):
-    def __init__(self, C: int, C_latent: int, num_heads: int):
+    def __init__(self, *, C: int, C_latent: int, num_heads: int, context_length: int):
         super().__init__()
 
         self.C = C
@@ -65,6 +67,8 @@ class Attention(nn.Module):
 
         self.WV_c = nn.Linear(self.C, self.C_latent, bias=False)
         self.WV_u = nn.Linear(self.C_latent, self.C, bias=False)
+
+        self.rope = RoPE(dim=self.d_head, context_length=context_length)
 
     def forward(
         self, X: torch.Tensor, cache: tuple[torch.Tensor, torch.Tensor] | None = None
@@ -87,8 +91,10 @@ class Attention(nn.Module):
 
         # split into heads
         # (B, T, C) -> (B, num_heads, T, d_head)
-        Q_h = Q.view(B, -1, self.num_heads, self.d_head).transpose(1, 2)
-        K_h = K.view(B, -1, self.num_heads, self.d_head).transpose(1, 2)
+        Q_h = self.rope(
+            Q.view(B, -1, self.num_heads, self.d_head), start_pos=K.shape[1] - T
+        ).transpose(1, 2)
+        K_h = self.rope(K.view(B, -1, self.num_heads, self.d_head)).transpose(1, 2)
         V_h = V.view(B, -1, self.num_heads, self.d_head).transpose(1, 2)
 
         # attention
