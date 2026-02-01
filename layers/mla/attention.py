@@ -101,7 +101,7 @@ class Attention(nn.Module):
         scores = Q_h @ K_h.transpose(-2, -1) / math.sqrt(self.d_head)
 
         if T != 1:
-            mask = torch.tril(torch.ones(T, T))
+            mask = torch.tril(torch.ones(T, T)).to(K.device)
             scores = scores.masked_fill(mask == 0, -1e9)
 
         attn = scores.softmax(dim=-1) @ V_h

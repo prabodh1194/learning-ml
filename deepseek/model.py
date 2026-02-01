@@ -81,7 +81,7 @@ class Deepseek(nn.Module):
         total_aux_loss = 0
 
         for idx, block in enumerate(self.blocks):
-            X, aux_loss, cache = block(X, caches[idx])
+            X, aux_loss, cache = block(X, caches[idx] if caches else None)
             new_caches.append(cache)
             total_aux_loss += aux_loss
 

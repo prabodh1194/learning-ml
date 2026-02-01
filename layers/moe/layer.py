@@ -122,10 +122,9 @@ class MOELayer(nn.Module):
             )
             routed_output[tokens_mask] += out
 
-        stats = self.get_load_balance_stats(expert_indices)
-
-        print(f"  Expert counts: {stats['expert_counts']}")
-        print(f"  CV: {stats['cv']:.3f}, Load imbalance: {stats['load_imbalance']:.2f}")
+        _ = self.get_load_balance_stats(expert_indices)
+        # print(f"  Expert counts: {stats['expert_counts']}")
+        # print(f"  CV: {stats['cv']:.3f}, Load imbalance: {stats['load_imbalance']:.2f}")
 
         return shared_output, routed_output, aux_loss
 
