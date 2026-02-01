@@ -46,6 +46,7 @@ def train(
     epochs: int = 10,
     batch_size: int = 32,
     lr: float = 3e-4,
+    aux_weight: float = 0.01,
 ):
     optimizer = optim.AdamW(model.parameters(), lr=lr)
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
@@ -60,8 +61,9 @@ def train(
         for batch_idx, (x, y) in enumerate(loader):
             # x, y is (B, T)
             x, y = x.to(device), y.to(device)
-            logits, _ = model(x)
-            loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), y.view(-1))
+            logits, aux_loss, _ = model(x)
+            ce_loss = F.cross_entropy(logits.view(-1, logits.shape[-1]), y.view(-1))
+            loss = ce_loss + aux_weight * aux_loss
 
             optimizer.zero_grad()
             loss.backward()
@@ -69,7 +71,7 @@ def train(
 
             total_loss += loss.item()
 
-            if batch_idx % 100 == 0:
+            if batch_idx % 10 == 0:
                 logger.info(
                     f"[{epoch + 1}] [{batch_idx + 1}/{total_batches}] loss: {loss.item():.4f}"
                 )

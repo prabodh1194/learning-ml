@@ -49,7 +49,7 @@ class LLaMA(nn.Module):
         tokens: torch.Tensor,
         start_pos: int = 0,
         kv_caches: list[tuple] | None = None,
-    ) -> tuple[torch.Tensor, list[tuple]]:
+    ) -> tuple[torch.Tensor, float, list[tuple]]:
         # tokens: (B, T)
         x = self.embed(tokens)  # (B, T, C); C = dim
 
@@ -62,7 +62,7 @@ class LLaMA(nn.Module):
         x = self.norm(x)
         logits = self.lm_head(x)
 
-        return logits, new_caches
+        return logits, 0.0, new_caches
 
     def _sample(self, logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
         # logits is (B, vocab_size)
@@ -79,7 +79,7 @@ class LLaMA(nn.Module):
     def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None):
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.context_length :]  # slide window
-            logits, _ = self.forward(idx_cond)
+            logits, _, _ = self.forward(idx_cond)
             next_token = self._sample(logits[:, -1, :], temperature)
             idx = torch.cat([idx, next_token], dim=1)
             if decode_fn:

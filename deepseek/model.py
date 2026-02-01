@@ -74,14 +74,14 @@ class Deepseek(nn.Module):
     def forward(
         self,
         tokens: torch.Tensor,
-        caches: list,
+        kv_caches: list | None = None,
     ):
         X = self.embedding(tokens)
         new_caches = []
         total_aux_loss = 0
 
         for idx, block in enumerate(self.blocks):
-            X, aux_loss, cache = block(X, caches[idx] if caches else None)
+            X, aux_loss, cache = block(X, kv_caches[idx] if kv_caches else None)
             new_caches.append(cache)
             total_aux_loss += aux_loss
 
@@ -108,7 +108,7 @@ if __name__ == "__main__":
 
     # forward pass (B = 2, T = 5)
     tokens = torch.randint(0, 256, (2, 5))
-    logits, aux_loss, caches = deepseek_model(tokens, [None] * num_layers)
+    logits, aux_loss, caches = deepseek_model(tokens)
 
     print("logits shape: ", logits.shape)
     print("auxiliary loss: ", aux_loss)
