@@ -1,3 +1,45 @@
+"""
+Multi-head Latent Attention (MLA) - DeepSeek's KV cache compression
+
+MHA vs MLA:
+───────────────────────────────────────────────────────────────────
+                MHA                         MLA
+───────────────────────────────────────────────────────────────────
+K path:     X → W_K → K              X → WK_c → K_latent → WK_u → K
+V path:     X → W_V → V              X → WV_c → V_latent → WV_u → V
+Cache:      Full K, V (large)        Latents only (small)
+Compression: None                     C → C_latent (e.g., 8x)
+───────────────────────────────────────────────────────────────────
+
+How Learning Works:
+───────────────────────────────────────────────────────────────────
+Fixed (not learned):
+    scores = Q @ K.T / sqrt(d)    # dot product similarity
+    attn = softmax(scores)        # normalize to weights
+    out = attn @ V                # weighted sum
+
+Learned (weight matrices):
+    W_Q:  "What am I looking for?" - query projection
+    W_K:  "What do I contain?" - key projection (via WK_c, WK_u)
+    W_V:  "What do I give if selected?" - value projection (via WV_c, WV_u)
+    W_O:  "How to combine heads" - output projection
+
+Gradient Flow:
+    Loss → W_O → attn weights → W_Q, W_K, W_V
+
+    If attending to token X reduced loss → Q/K pushed to match stronger
+    If attending to token Y hurt loss → Q/K pushed to match weaker
+
+MLA Bottleneck:
+    WK_c, WK_u force model to learn compressed K representation
+    WV_c, WV_u force model to learn compressed V representation
+
+    Similar to autoencoders - bottleneck forces meaningful compression
+    rather than memorizing everything.
+
+DeepSeek's bet: compression loss is worth the 8x cache reduction at scale.
+"""
+
 import math
 
 import torch
