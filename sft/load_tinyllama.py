@@ -88,6 +88,6 @@ if __name__ == "__main__":
     model = load()
 
     model.eval()
-    output = model.generate(tokens, max_new_tokens=100, temperature=.7)
+    output = model.generate(tokens, max_new_tokens=100, temperature=0.7)
 
     print(tokenizer.decode(output[0]))

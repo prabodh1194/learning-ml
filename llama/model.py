@@ -66,6 +66,80 @@ class LLaMA(nn.Module):
 
         return logits, 0.0, new_caches
 
+    """
+    theory on temp:
+    
+LOGITS (raw model output):
+─────────────────────────
+Paris:     2.0
+Lyon:      1.0
+Berlin:    0.5
+
+SOFTMAX FORMULA:
+softmax(x) = e^x / sum(e^all)
+
+Step by step with different temperatures:
+
+TEMPERATURE = 1.0 (divide by 1, no change)
+───────────────────────────────────────────
+logits/T:   2.0/1 = 2.0    1.0/1 = 1.0    0.5/1 = 0.5
+
+e^(logit/T):  e^2.0 = 7.39   e^1.0 = 2.72   e^0.5 = 1.65
+                                            sum = 11.76
+
+probs:      7.39/11.76     2.72/11.76     1.65/11.76
+            = 0.63         = 0.23         = 0.14
+            ██████         ██             █
+
+
+TEMPERATURE = 0.5 (divide by 0.5 = multiply by 2)
+───────────────────────────────────────────
+logits/T:   2.0/0.5 = 4.0   1.0/0.5 = 2.0   0.5/0.5 = 1.0
+                 ↑               ↑               ↑
+            gaps get BIGGER (4 vs 2 vs 1)
+
+e^(logit/T):  e^4.0 = 54.6   e^2.0 = 7.39   e^1.0 = 2.72
+                                            sum = 64.71
+
+probs:      54.6/64.71     7.39/64.71     2.72/64.71
+            = 0.84         = 0.11         = 0.04
+            ████████       █              ▪
+                 ↑
+            Paris dominates!
+
+
+TEMPERATURE = 2.0 (divide by 2)
+───────────────────────────────────────────
+logits/T:   2.0/2 = 1.0    1.0/2 = 0.5    0.5/2 = 0.25
+                 ↑              ↑              ↑
+            gaps get SMALLER (1 vs 0.5 vs 0.25)
+
+e^(logit/T):  e^1.0 = 2.72   e^0.5 = 1.65   e^0.25 = 1.28
+                                            sum = 5.65
+
+probs:      2.72/5.65      1.65/5.65      1.28/5.65
+            = 0.48         = 0.29         = 0.23
+            ████           ███            ██
+                 ↑
+            More even, anyone could win!
+
+The key insight:
+
+e^x is EXPONENTIAL - small differences become HUGE
+
+Original logits:     2.0    1.0    0.5     (gaps: 1.0, 0.5)
+
+Low T (÷0.5):        4.0    2.0    1.0     (gaps: 2.0, 1.0)  → BIGGER gaps
+                      ↓
+                   e^4 vs e^2 = 54 vs 7    → winner takes all
+
+High T (÷2):         1.0    0.5    0.25    (gaps: 0.5, 0.25) → SMALLER gaps
+                      ↓
+                   e^1 vs e^0.5 = 2.7 vs 1.6 → more competitive
+
+TL;DR: Dividing by T shrinks/expands the gaps between logits. Exponential (e^x) amplifies those gaps into probabilities.
+    """
+
     def _sample(self, logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
         # logits is (B, vocab_size)
         if temperature == 0:

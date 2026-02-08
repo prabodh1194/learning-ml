@@ -22,7 +22,7 @@ model = LLaMA(
     context_length=context_length,
     num_head=4,
     num_kv_head=2,
-    hidden_dim=int(8 * C / 3)
+    hidden_dim=int(8 * C / 3),
 ).to(device)
 
 # load checkpoint
