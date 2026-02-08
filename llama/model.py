@@ -138,6 +138,53 @@ High T (÷2):         1.0    0.5    0.25    (gaps: 0.5, 0.25) → SMALLER gaps
                    e^1 vs e^0.5 = 2.7 vs 1.6 → more competitive
 
 TL;DR: Dividing by T shrinks/expands the gaps between logits. Exponential (e^x) amplifies those gaps into probabilities.
+
+now multinomial interplay is:
+  
+STEP 1: Temperature adjusts probabilities
+─────────────────────────────────────────
+logits = [2.0, 1.0, 0.5]
+
+probs = softmax(logits / T)
+
+T=0.5 → [0.84, 0.11, 0.04]   (Paris dominates)
+T=2.0 → [0.48, 0.29, 0.23]   (more even)
+
+
+STEP 2: Multinomial samples ONE token based on those probs
+─────────────────────────────────────────
+torch.multinomial(probs, num_samples=1)
+
+Think of it as spinning a weighted wheel:
+
+T=0.5 probs [0.84, 0.11, 0.04]:
+┌────────────────────────────────┐
+│ ████████████████████  Paris 84%│
+│ ███  Lyon 11%                  │
+│ █  Berlin 4%                   │
+└────────────────────────────────┘
+→ Almost always lands on Paris
+
+T=2.0 probs [0.48, 0.29, 0.23]:
+┌────────────────────────────────┐
+│ ██████████  Paris 48%          │
+│ ██████  Lyon 29%               │
+│ █████  Berlin 23%              │
+└────────────────────────────────┘
+→ Paris likely, but Lyon/Berlin have real chances
+
+The interplay:
+
+Temperature = shapes the wheel
+Multinomial = spins the wheel
+
+Low T  → big slice for winner → spin almost always hits it
+High T → similar slices      → spin is more unpredictable
+T=0    → skip wheel entirely → just pick argmax (greedy)
+
+In code:
+probs = (logits / temperature).softmax(dim=-1)  # shape the wheel
+result = torch.multinomial(probs, num_samples=1) # spin it once
     """
 
     def _sample(self, logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
