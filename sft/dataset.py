@@ -21,6 +21,30 @@ PROMPT_TEMPLATE_WITH_INPUT = """### Instruction:
 ### Response:
 {output}</s>"""
 
+def tokenize_with_mask(
+    example: dict, tokenizer: TokenizersBackend, max_length: int = 512
+):
+    prompt = format_example(example, skip_response=True)
+    response = f"{example['output']}</s>"
+
+    # tokenise separately
+    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    response_ids = tokenizer.encode(response, add_special_tokens=False)
+
+    # combine
+    input_ids = prompt_ids + response_ids
+
+    labels = [-100] * len(prompt_ids) + response_ids
+
+    input_ids = input_ids[:max_length]
+    labels = labels[:max_length]
+
+    return {
+        "input_ids": input_ids,
+        "labels": labels,
+    }
+
+
 
 def format_example(example: dict, skip_response: bool = False) -> str:
     has_input = example.get("input", "").strip()
@@ -47,15 +71,14 @@ class AlpacaDataset(Dataset):
     def __init__(
         self,
         tokenizer: TokenizersBackend,
-        max_length: int = 512 * 3,
+        max_length: int = 512,
         split: str = "train",
     ) -> None:
         raw = load_dataset("tatsu-lab/alpaca", split="train")
 
         self.examples = []
         for ex in raw:
-            text = format_example(ex)
-            tokens = tokenizer.encode(text, truncation=True, max_length=max_length)
+            tokens = tokenize_with_mask(ex, tokenizer, max_length)
             self.examples.append(tokens)
 
     def __len__(self) -> int:

@@ -1,36 +1,10 @@
-from transformers import TokenizersBackend
+from transformers import AutoTokenizer, TokenizersBackend
 
 from llama.block import LLaMABlock
 from llama.model import LLaMA
-from sft.dataset import format_example
-from sft.load_tinyllama import load
+from sft.dataset import tokenize_with_mask
+from sft.load_tinyllama import MODEL_DIR, load
 from sft.lora_linear import LoRALinear
-from transformers import AutoTokenizer
-from sft.load_tinyllama import MODEL_DIR
-
-
-def tokenize_with_mask(
-    example: dict, tokenizer: TokenizersBackend, max_length: int = 512
-):
-    prompt = format_example(example, skip_response=True)
-    response = f"{example['output']}</s>"
-
-    # tokenise separately
-    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
-    response_ids = tokenizer.encode(response, add_special_tokens=False)
-
-    # combine
-    input_ids = prompt_ids + response_ids
-
-    labels = [-100] * len(prompt_ids) + response_ids
-
-    input_ids = input_ids[:max_length]
-    labels = labels[:max_length]
-
-    return {
-        "input_ids": input_ids,
-        "labels": labels,
-    }
 
 
 def apply_lora(model: LLaMA, rank: int = 8, alpha: float = 16.0):
