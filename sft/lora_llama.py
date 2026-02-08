@@ -1,7 +1,36 @@
+from transformers import TokenizersBackend
+
 from llama.block import LLaMABlock
 from llama.model import LLaMA
+from sft.dataset import format_example
 from sft.load_tinyllama import load
 from sft.lora_linear import LoRALinear
+from transformers import AutoTokenizer
+from sft.load_tinyllama import MODEL_DIR
+
+
+def tokenize_with_mask(
+    example: dict, tokenizer: TokenizersBackend, max_length: int = 512
+):
+    prompt = format_example(example, skip_response=True)
+    response = f"{example['output']}</s>"
+
+    # tokenise separately
+    prompt_ids = tokenizer.encode(prompt, add_special_tokens=False)
+    response_ids = tokenizer.encode(response, add_special_tokens=False)
+
+    # combine
+    input_ids = prompt_ids + response_ids
+
+    labels = [-100] * len(prompt_ids) + response_ids
+
+    input_ids = input_ids[:max_length]
+    labels = labels[:max_length]
+
+    return {
+        "input_ids": input_ids,
+        "labels": labels,
+    }
 
 
 def apply_lora(model: LLaMA, rank: int = 8, alpha: float = 16.0):
@@ -23,6 +52,27 @@ def apply_lora(model: LLaMA, rank: int = 8, alpha: float = 16.0):
 
 
 if __name__ == "__main__":
+    # Test tokenize_with_mask
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
+
+    example = {"instruction": "What is 2+2?", "input": "", "output": "4"}
+
+    result = tokenize_with_mask(example, tokenizer)
+
+    print("=== Masking Test ===")
+    print(f"Input IDs length: {len(result['input_ids'])}")
+    print(f"Labels length: {len(result['labels'])}")
+    print(f"Masked tokens (label=-100): {result['labels'].count(-100)}")
+    print(f"Unmasked tokens: {len(result['labels']) - result['labels'].count(-100)}")
+    print()
+    print("Decoded input:", tokenizer.decode(result["input_ids"]))
+    print()
+    print("Labels (showing mask):")
+    for i, (tok, lab) in enumerate(zip(result["input_ids"], result["labels"])):
+        marker = "MASK" if lab == -100 else "TRAIN"
+        print(f"  {marker}: {tokenizer.decode([tok])!r}")
+
+    print("\n=== LoRA Test ===")
     model = load()
     model = apply_lora(model)
 
