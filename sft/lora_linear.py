@@ -32,7 +32,7 @@ The math trick:
 
 Before LoRA:     y = Wx
 
-After LoRA:      y = Wx + (BA)x
+After LoRA:      y = Wx + (BA)x * scaling
                      │     │
                  frozen   trainable
                           (rank r = 8)
@@ -46,6 +46,32 @@ Real numbers for TinyLlama:
 - Total params: 1.1B
 - LoRA params: ~2.8M (only 0.25%!)
 - That's like updating 1 page instead of a 400-page book
+
+─────────────────────────────────────────────────────────────
+ALPHA & SCALING EXPLAINED:
+
+y = base_out + lora_out * scaling
+                         └── How much should LoRA contribute?
+
+scaling = alpha / rank
+
+┌────────────────────────────────────────────────────────────┐
+│  rank  = complexity dial (how many params in A & B)        │
+│  alpha = strength dial (how much LoRA influences output)   │
+│                                                            │
+│  Why divide? Higher rank = bigger matrices = bigger output │
+│  Dividing by rank keeps magnitude stable when rank changes │
+└────────────────────────────────────────────────────────────┘
+
+Common configs:
+┌──────┬───────┬─────────┬──────────────────┐
+│ rank │ alpha │ scaling │ Use case         │
+├──────┼───────┼─────────┼──────────────────┤
+│ 8    │ 16    │ 2.0     │ Default, balance │
+│ 8    │ 8     │ 1.0     │ Conservative     │
+│ 16   │ 32    │ 2.0     │ More capacity    │
+│ 4    │ 8     │ 2.0     │ Minimal params   │
+└──────┴───────┴─────────┴──────────────────┘
 """
 
 import torch
