@@ -22,10 +22,10 @@ class GQA(nn.Module):
         self.d_head = dim // num_head
         self.d_kv = self.d_head * num_kv_head
 
-        self.W_q = nn.Linear(dim, dim)
-        self.W_k = nn.Linear(dim, self.d_kv)
-        self.W_v = nn.Linear(dim, self.d_kv)
-        self.W_o = nn.Linear(dim, dim)
+        self.W_q = nn.Linear(dim, dim, bias=False)
+        self.W_k = nn.Linear(dim, self.d_kv, bias=False)
+        self.W_v = nn.Linear(dim, self.d_kv, bias=False)
+        self.W_o = nn.Linear(dim, dim, bias=False)
 
     def forward(
         self,
