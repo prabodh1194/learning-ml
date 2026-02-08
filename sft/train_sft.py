@@ -29,6 +29,9 @@ if __name__ == "__main__":
         for batch in data_loader:
             input_ids, labels = batch["input_ids"], batch["labels"]
 
+            input_ids = torch.tensor(input_ids).unsqueeze(0)  # (T) -> (1, T)
+            labels = torch.tensor(labels).unsqueeze(0)  # (T) -> (1, T)
+
             logits, *_ = model(input_ids)
 
-            loss = F.cross_entropy(logits[:, :-1, :], labels[:, 1:])
+            loss = F.cross_entropy(logits[:, :-1, :].reshape(-1, 32000), labels[:, 1:].reshape(-1), ignore_index=-100)
