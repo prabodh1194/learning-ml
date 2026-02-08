@@ -4,11 +4,11 @@ import torch.nn.functional as F
 
 
 class SwiGLU(nn.Module):
-    def __init__(self, dim: int):
+    def __init__(self, *, dim: int, hidden_dim: int):
         super().__init__()
 
         self.dim = dim
-        self.hidden_dim = int(8 * dim / 3)
+        self.hidden_dim = hidden_dim
 
         self.w_up = nn.Linear(self.dim, self.hidden_dim, bias=False)
         self.w_gate = nn.Linear(self.dim, self.hidden_dim, bias=False)

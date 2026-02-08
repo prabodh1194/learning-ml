@@ -30,7 +30,8 @@ class LLaMABlock(nn.Module):
         self.attn = GQA(self.rope, dim, num_head, num_kv_head)
 
         self.ffn_norm = RMSNorm(dim)
-        self.ffn = SwiGLU(dim)
+        hidden_dim = int(8 * dim / 3)
+        self.ffn = SwiGLU(dim=dim, hidden_dim=hidden_dim)
 
     def forward(
         self,

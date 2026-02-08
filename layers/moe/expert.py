@@ -11,8 +11,10 @@ class ExpertArray(nn.Module):
         super().__init__()
         self.num_experts = num_experts
         self.expert_array = nn.ModuleList()
+
+        hidden_dim = int(8 * dim / 3)
         for i in range(num_experts):
-            self.expert_array.append(Expert(dim))
+            self.expert_array.append(Expert(dim=dim, hidden_dim=hidden_dim))
 
     def forward(self, X: torch.Tensor, expert_idx: int) -> torch.Tensor:
         return self.expert_array[expert_idx].forward(X)
