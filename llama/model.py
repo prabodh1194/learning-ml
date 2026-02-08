@@ -19,6 +19,7 @@ class LLaMA(nn.Module):
         n_layers: int,
         vocab_size: int,
         dim: int,
+        hidden_dim: int,
         context_length: int,
         num_head: int,
         num_kv_head: int,
@@ -36,6 +37,7 @@ class LLaMA(nn.Module):
                     context_length=context_length,
                     num_head=num_head,
                     num_kv_head=num_kv_head,
+                    hidden_dim=hidden_dim,
                 )
                 for _ in range(n_layers)
             ]

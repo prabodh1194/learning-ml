@@ -16,4 +16,5 @@ dependencies = [
 dev = [
     "ipython>=9.9.0",
     "pillow>=12.1.0",
+    "ruff>=0.15.0",
 ]

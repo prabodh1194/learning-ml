@@ -107,6 +107,7 @@ if __name__ == "__main__":
         context_length=cfg.context_len,
         num_head=cfg.num_head,
         num_kv_head=cfg.num_kv_head,
+        hidden_dim=int(8 * cfg.dim / 3),
     ).to(device)
 
     train(
