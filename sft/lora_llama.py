@@ -1,3 +1,5 @@
+import itertools
+
 from transformers import AutoTokenizer, TokenizersBackend
 
 from llama.block import LLaMABlock
@@ -25,6 +27,31 @@ def apply_lora(model: LLaMA, rank: int = 8, alpha: float = 16.0):
     return model
 
 
+def save_lora_weights(model: LLaMA) -> dict:
+    out = {}
+    qkv = ["q", "k", "v", "o"]
+    types = ["A", "B"]
+
+    for i, layer in enumerate(model.layers):
+        for _qkv, _types in itertools.product(qkv, types):
+            out[f"layer.{i}.W_{_qkv}_{_types}"] = getattr(
+                getattr(layer.attn, f"W_{_qkv}"), _types
+            )
+
+    return out
+
+
+def load_lora_weights(model: LLaMA, lora_weights: dict) -> LLaMA:
+    qkv = ["q", "k", "v", "o"]
+    types = ["A", "B"]
+    for i, layer in enumerate(model.layers):
+        for _qkv, _types in itertools.product(qkv, types):
+            lora_layer = getattr(layer.attn, f"W_{_qkv}")
+            setattr(lora_layer, _types, lora_weights[f"layer.{i}.W_{_qkv}_{_types}"])
+
+    return model
+
+
 if __name__ == "__main__":
     # Test tokenize_with_mask
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
@@ -47,11 +74,11 @@ if __name__ == "__main__":
         print(f"  {marker}: {tokenizer.decode([tok])!r}")
 
     print("\n=== LoRA Test ===")
-    model = load()
-    model = apply_lora(model)
+    llama_model = load()
+    lora_model = apply_lora(llama_model)
 
-    total = sum(p.numel() for p in model.parameters())
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    total = sum(p.numel() for p in lora_model.parameters())
+    trainable = sum(p.numel() for p in lora_model.parameters() if p.requires_grad)
 
     print(f"Total params: {total:,}")
     print(f"Trainable params: {trainable:,}")
