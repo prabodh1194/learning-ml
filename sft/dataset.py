@@ -57,7 +57,7 @@ def format_example(example: dict, skip_response: bool = False) -> str:
             return f"### Instruction:\n{example['instruction']}\n\n### Response:\n"
     else:
         # Full template with response + </s>
-        example["output"] = f"{example['output']}"
+        example["output"] = f" {example['output']}"
         if has_input:
             pr = PROMPT_TEMPLATE_WITH_INPUT.format(**example)
         else:
