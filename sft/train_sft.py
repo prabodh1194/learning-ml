@@ -69,5 +69,10 @@ if __name__ == "__main__":
                 accum_loss = 0.0
                 step += 1
 
+                if step >= max_steps:
+                    break
+        if step >= max_steps:
+            break
+
     log_file.close()
     print("\nTraining complete!")
