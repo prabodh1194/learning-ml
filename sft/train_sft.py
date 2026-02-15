@@ -25,6 +25,7 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
     data_loader = AlpacaDataset(tokenizer)
 
+    step = 0
     for epoch in range(epochs):
         for batch in data_loader:
             input_ids, labels = batch["input_ids"], batch["labels"]
@@ -35,3 +36,15 @@ if __name__ == "__main__":
             logits, *_ = model(input_ids)
 
             loss = F.cross_entropy(logits[:, :-1, :].reshape(-1, 32000), labels[:, 1:].reshape(-1), ignore_index=-100)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # Live counter (overwrites itself)
+            print(f"\rstep {step} | epoch {epoch} | loss: {loss.item():.4f}", end="", flush=True)
+
+            # Sticky log every 500 steps (stays visible)
+            if step % 50 == 0:
+                print()  # newline to "stick" the current line
+            step += 1
