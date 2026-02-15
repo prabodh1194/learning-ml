@@ -200,6 +200,8 @@ result = torch.multinomial(probs, num_samples=1) # spin it once
 
     @torch.inference_mode()
     def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None, eos_token_id=2):
+        original_len = idx.shape[1]
+
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.context_length :]  # slide window
             logits, _, _ = self.forward(idx_cond)
@@ -216,4 +218,6 @@ result = torch.multinomial(probs, num_samples=1) # spin it once
 
         if decode_fn:
             print()
-        return idx[:, -max_new_tokens:]
+
+        # Return only the NEW tokens
+        return idx[:, original_len:]
