@@ -1,4 +1,5 @@
 import torch
+from datetime import datetime
 from transformers import AutoTokenizer
 
 from sft.dataset import AlpacaDataset
@@ -10,11 +11,13 @@ from torch.nn import functional as F
 if __name__ == "__main__":
     epochs = 3
     lr = 2e-4
-    B = 4
-    warmup_steps = 100
+    accum_steps = 4  # gradient accumulation
+    max_steps = 1000
+    device = "mps"
 
     model = load()
     model = apply_lora(model)
+    model.to(device)
     model.train()
 
     optimizer = torch.optim.AdamW(
@@ -25,26 +28,46 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
     data_loader = AlpacaDataset(tokenizer)
 
+    # CSV logging
+    log_file = open("training_log.csv", "w")
+    log_file.write("step,timestamp,loss\n")
+
     step = 0
+    accum_loss = 0.0
     for epoch in range(epochs):
-        for batch in data_loader:
+        for i, batch in enumerate(data_loader):
             input_ids, labels = batch["input_ids"], batch["labels"]
 
-            input_ids = torch.tensor(input_ids).unsqueeze(0)  # (T) -> (1, T)
-            labels = torch.tensor(labels).unsqueeze(0)  # (T) -> (1, T)
+            input_ids = torch.tensor(input_ids).unsqueeze(0).to(device)  # (T) -> (1, T)
+            labels = torch.tensor(labels).unsqueeze(0).to(device)  # (T) -> (1, T)
 
             logits, *_ = model(input_ids)
 
             loss = F.cross_entropy(logits[:, :-1, :].reshape(-1, 32000), labels[:, 1:].reshape(-1), ignore_index=-100)
-
-            optimizer.zero_grad()
+            loss = loss / accum_steps  # scale loss for accumulation
             loss.backward()
-            optimizer.step()
+            accum_loss += loss.item()
 
-            # Live counter (overwrites itself)
-            print(f"\rstep {step} | epoch {epoch} | loss: {loss.item():.4f}", end="", flush=True)
+            # Update weights every accum_steps
+            if (i + 1) % accum_steps == 0:
+                optimizer.step()
+                optimizer.zero_grad()
 
-            # Sticky log every 500 steps (stays visible)
-            if step % 50 == 0:
-                print()  # newline to "stick" the current line
-            step += 1
+                now = datetime.now().strftime("%H:%M:%S")
+
+                # CSV log
+                log_file.write(f"{step},{now},{accum_loss:.4f}\n")
+                log_file.flush()
+
+                # Live counter
+                print(f"\r[{now}] step {step} | epoch {epoch} | loss: {accum_loss:.4f}", end="", flush=True)
+
+                # Sticky log every 50 steps
+                if step % 50 == 0:
+                    print()
+
+                accum_loss = 0.0
+                step += 1
+
+    log_file.close()
+    print("\nTraining complete!")
