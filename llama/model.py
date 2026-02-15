@@ -199,14 +199,21 @@ result = torch.multinomial(probs, num_samples=1) # spin it once
         return result  # (B, 1)
 
     @torch.inference_mode()
-    def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None):
+    def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None, eos_token_id=2):
         for _ in range(max_new_tokens):
             idx_cond = idx[:, -self.context_length :]  # slide window
             logits, _, _ = self.forward(idx_cond)
             next_token = self._sample(logits[:, -1, :], temperature)
             idx = torch.cat([idx, next_token], dim=1)
+
+            token_id = next_token[0].item()
             if decode_fn:
-                print(decode_fn(next_token[0].item()), end="", flush=True)
+                print(decode_fn(token_id), end="", flush=True)
+
+            # Stop at EOS token
+            if token_id == eos_token_id:
+                break
+
         if decode_fn:
             print()
         return idx[:, -max_new_tokens:]

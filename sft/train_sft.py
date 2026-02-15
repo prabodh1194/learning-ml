@@ -1,10 +1,11 @@
 import torch
 from datetime import datetime
+from pathlib import Path
 from transformers import AutoTokenizer
 
 from sft.dataset import AlpacaDataset
 from sft.load_tinyllama import MODEL_DIR, load
-from sft.lora_llama import apply_lora
+from sft.lora_llama import apply_lora, save_lora_weights, load_lora_weights
 
 from torch.nn import functional as F
 
@@ -17,6 +18,16 @@ if __name__ == "__main__":
 
     model = load()
     model = apply_lora(model)
+
+    # Resume from checkpoint if exists
+    adapter_path = Path("adapters/alpaca.pt")
+    if adapter_path.exists():
+        print(f"Loading existing adapter from {adapter_path}")
+        weights = torch.load(adapter_path)
+        load_lora_weights(model, weights)
+    else:
+        print("Starting fresh training")
+
     model.to(device)
     model.train()
 
@@ -76,3 +87,8 @@ if __name__ == "__main__":
 
     log_file.close()
     print("\nTraining complete!")
+
+    # Save adapter weights
+    weights = save_lora_weights(model)
+    torch.save(weights, "adapters/alpaca.pt")
+    print("Saved adapter to adapters/alpaca.pt")

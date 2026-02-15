@@ -1,10 +1,12 @@
 import itertools
+import torch
 
 from transformers import AutoTokenizer, TokenizersBackend
+from pathlib import Path
 
 from llama.block import LLaMABlock
 from llama.model import LLaMA
-from sft.dataset import tokenize_with_mask
+from sft.dataset import format_example
 from sft.load_tinyllama import MODEL_DIR, load
 from sft.lora_linear import LoRALinear
 
@@ -53,33 +55,42 @@ def load_lora_weights(model: LLaMA, lora_weights: dict) -> LLaMA:
 
 
 if __name__ == "__main__":
-    # Test tokenize_with_mask
+    print("=== Loading model with LoRA adapter ===")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
 
-    example = {"instruction": "What is 2+2?", "input": "", "output": "4"}
+    model = load()
+    model = apply_lora(model)
 
-    result = tokenize_with_mask(example, tokenizer)
+    # Load adapter weights
+    adapter_path = Path("adapters/alpaca.pt")
+    if adapter_path.exists():
+        print(f"Loading adapter from {adapter_path}")
+        weights = torch.load(adapter_path)
+        model = load_lora_weights(model, weights)
+    else:
+        print("No adapter found, using base LoRA (untrained)")
 
-    print("=== Masking Test ===")
-    print(f"Input IDs length: {len(result['input_ids'])}")
-    print(f"Labels length: {len(result['labels'])}")
-    print(f"Masked tokens (label=-100): {result['labels'].count(-100)}")
-    print(f"Unmasked tokens: {len(result['labels']) - result['labels'].count(-100)}")
-    print()
-    print("Decoded input:", tokenizer.decode(result["input_ids"]))
-    print()
-    print("Labels (showing mask):")
-    for i, (tok, lab) in enumerate(zip(result["input_ids"], result["labels"])):
-        marker = "MASK" if lab == -100 else "TRAIN"
-        print(f"  {marker}: {tokenizer.decode([tok])!r}")
+    model.to("mps")
+    model.eval()
 
-    print("\n=== LoRA Test ===")
-    llama_model = load()
-    lora_model = apply_lora(llama_model)
+    print("\n=== Generation Test ===")
+    print("Type 'quit' to exit\n")
 
-    total = sum(p.numel() for p in lora_model.parameters())
-    trainable = sum(p.numel() for p in lora_model.parameters() if p.requires_grad)
+    while True:
+        instruction = input("Instruction: ")
+        if instruction.lower() == "quit":
+            break
 
-    print(f"Total params: {total:,}")
-    print(f"Trainable params: {trainable:,}")
-    print(f"Trainable %: {100 * trainable / total:.2f}%")
+        # Format as instruction prompt
+        prompt = format_example({"instruction": instruction, "input": "", "output": ""}, skip_response=True)
+        input_ids = tokenizer.encode(prompt, return_tensors="pt").to("mps")
+
+        # Generate and decode all at once for proper spacing
+        output_ids = model.generate(
+            input_ids,
+            max_new_tokens=100,
+            temperature=0.7,
+        )
+        response = tokenizer.decode(output_ids[0].tolist(), skip_special_tokens=True)
+        print(f"Response: {response}")
+        print()
