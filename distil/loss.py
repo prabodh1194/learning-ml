@@ -14,8 +14,10 @@ def soft_targets(logits: torch.Tensor, temperature: float = 1.0):
 if __name__ == "__main__":
     logits = torch.tensor([2.0, 1.0, 0.5])
 
-    # T=1: [0.63, 0.23, 0.14]  ← Peaky (Paris dominates)
+    # assume Q is what's the capital of France?
+
+    # T=1: [0.63, 0.23, 0.14]  ← Peaky (e.g.: Paris dominates)
     print(soft_targets(logits, temperature=1))
 
-    # T=4: [0.41, 0.32, 0.28]  ← Smoother (dark knowledge visible)
+    # T=4: [0.41, 0.32, 0.28]  ← Smoother (dark knowledge visible, e.g. other French cities)
     print(soft_targets(logits, temperature=4))
