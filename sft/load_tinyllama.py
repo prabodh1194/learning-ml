@@ -17,7 +17,7 @@ SCRIPT_DIR = Path(__file__).parent
 MODEL_DIR = SCRIPT_DIR.parent
 
 
-def load():
+def load(freeze: bool = False):
     logger.info("Creating LLaMA model...")
     # fetch from: https://arxiv.org/pdf/2401.02385
     model = LLaMA(
@@ -74,6 +74,12 @@ def load():
         model.lm_head.weight.data.copy_(f.get_tensor("lm_head.weight"))
 
     logger.info("Model loaded successfully!")
+
+    if freeze:
+        logger.info("Freezing LLaMA model...")
+        for p in model.parameters():
+            p.requires_grad = False
+
     return model
 
 

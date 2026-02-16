@@ -16,7 +16,7 @@ if __name__ == "__main__":
     max_steps = 1000
     device = "mps"
 
-    model = load()
+    model = load(freeze=True)
     model = apply_lora(model)
 
     # Resume from checkpoint if exists

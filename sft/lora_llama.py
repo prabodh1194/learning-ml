@@ -15,9 +15,6 @@ def apply_lora(model: LLaMA, rank: int = 8, alpha: float = 16.0):
     """
     Replace attn projections with LoRA-wrapped versions.
     """
-    for param in model.parameters():
-        param.requires_grad = False
-
     layer: LLaMABlock
     for layer in model.layers:
         # wrap q, k, v, o projections
@@ -58,7 +55,7 @@ if __name__ == "__main__":
     print("=== Loading model with LoRA adapter ===")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR / "models/tinyllama-1.1b")
 
-    model = load()
+    model = load(freeze=True)
     model = apply_lora(model)
 
     # Load adapter weights
