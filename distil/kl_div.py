@@ -17,13 +17,19 @@ P, Q are already softmaxxed
 
 
 def kl_div_np(p: np.ndarray, q: np.ndarray) -> float:
+    # Flatten to 2D (B*T, vocab) if needed, then mean over rows
+    p = p.reshape(-1, p.shape[-1])
+    q = q.reshape(-1, q.shape[-1])
     e = p * np.log(p)
     ce = p * np.log(q)
-    return np.sum(e - ce)
+    return np.mean(np.sum(e - ce, axis=-1))  # sum over vocab, mean over tokens
 
 
 def kl_div_pt(p: torch.Tensor, q: torch.Tensor) -> torch.Tensor:
-    return F.kl_div(q.log(), p, reduction="sum")
+    # Flatten (B, T, vocab) → (B*T, vocab) so batchmean divides by B*T
+    p = p.view(-1, p.size(-1))
+    q = q.view(-1, q.size(-1))
+    return F.kl_div(q.log(), p, reduction="batchmean")
 
 
 if __name__ == "__main__":

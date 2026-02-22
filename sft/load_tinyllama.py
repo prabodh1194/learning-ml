@@ -17,7 +17,7 @@ SCRIPT_DIR = Path(__file__).parent
 MODEL_DIR = SCRIPT_DIR.parent
 
 
-def load(freeze: bool = False):
+def load(freeze: bool = False) -> LLaMA:
     logger.info("Creating LLaMA model...")
     # fetch from: https://arxiv.org/pdf/2401.02385
     model = LLaMA(

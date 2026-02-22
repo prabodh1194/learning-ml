@@ -23,6 +23,6 @@ handler.setFormatter(
     MicrosecondsFormatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 )
 logging.root.addHandler(handler)
-logging.root.setLevel(logging.DEBUG)
+logging.root.setLevel(logging.INFO)
 
 logger = logging.getLogger("llama")
