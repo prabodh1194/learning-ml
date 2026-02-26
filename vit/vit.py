@@ -4,7 +4,7 @@ from torch import nn
 from vit.patch_embed import extract_patches, embed
 
 
-def prefix_cls(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+def prefix_cls(embedded_patches: torch.Tensor, cls_token: nn.Parameter) -> torch.Tensor:
     """
     Prepend a learnable [CLS] token to the patch sequence.
 
@@ -39,9 +39,7 @@ def prefix_cls(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tens
 
     B, N, d_model = embedded_patches.shape
 
-    cls_token = nn.Parameter(torch.randn(1, 1, d_model)).expand(B, -1, -1)
-
-    return torch.cat((cls_token, embedded_patches), dim=1), cls_token
+    return torch.cat((cls_token.expand(B, -1, -1), embedded_patches), dim=1)
 
 
 def add_pos_embed(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -65,9 +63,9 @@ def encode(
 
 def classify(
     x: torch.Tensor,
-    d_model: int,
-    num_classes: int,
-) -> tuple[torch.Tensor, nn.LayerNorm, nn.Linear]:
+    norm: nn.LayerNorm,
+    head: nn.Linear,
+) -> torch.Tensor:
     """
     Take the CLS token output (position 0) and classify it:
 
@@ -85,23 +83,50 @@ def classify(
 
     cls = x[:, 0, :]
 
-    layer_norm = nn.LayerNorm(d_model)
-    lin = nn.Linear(d_model, num_classes)
-
-    return lin(layer_norm(cls)), layer_norm, lin
+    return head(norm(cls))
 
 
 class ViT(nn.Module):
-    def __init__(self, input_C: int, P: int, C: int):
+    def __init__(
+        self,
+        input_C: int,
+        P: int,
+        C: int,
+        T: int,
+        d_model: int,
+        n_heads: int,
+        n_layers: int,
+        num_classes: int,
+    ):
         super().__init__()
         self.P = P
         self.C = C
+        self.T = T
 
         # the input image has a certain number of channels
         patch_C = input_C * self.P * self.P
 
         self.patch_embed_layer = nn.Linear(patch_C, self.C)
+        self.cls_token = nn.Parameter(torch.randn(1, 1, self.C))
+        self.pos_embed = nn.Parameter(torch.randn((1, self.T, self.C)))
+        self.encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model, nhead=n_heads, dim_feedforward=self.C, batch_first=True
+        )
+        self.encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
+
+        self.classifier_norm = nn.LayerNorm(self.C)
+        self.classifier_head = nn.Linear(self.C, num_classes)
 
     def forward(self, images: torch.Tensor):
         x = extract_patches(images, self.P)
         x = embed(x, self.patch_embed_layer)
+        x = prefix_cls(x, self.cls_token)
+        x = x + self.pos_embed
+        x = self.encoder(x)
+        x = classify(
+            x,
+            self.classifier_norm,
+            self.classifier_head,
+        )
+
+        return x
