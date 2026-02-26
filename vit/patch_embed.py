@@ -35,5 +35,5 @@ if __name__ == "__main__":
 
     d_model = 64
     embedding_layer = nn.Linear(patches.shape[-1], d_model)
-    embedded, _ = embed(patches, embedding_layer)
+    embedded = embed(patches, embedding_layer)
     assert embedded.shape == (2, 64, 64)

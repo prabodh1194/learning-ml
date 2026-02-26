@@ -93,7 +93,7 @@ class ViT(nn.Module):
         P: int,
         C: int,
         T: int,
-        d_model: int,
+        mlp_dim: int,
         n_heads: int,
         n_layers: int,
         num_classes: int,
@@ -110,7 +110,7 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.C))
         self.pos_embed = nn.Parameter(torch.randn((1, self.T, self.C)))
         self.encoder_layer = nn.TransformerEncoderLayer(
-            d_model=d_model, nhead=n_heads, dim_feedforward=self.C, batch_first=True
+            d_model=self.C, nhead=n_heads, dim_feedforward=mlp_dim, batch_first=True
         )
         self.encoder = nn.TransformerEncoder(self.encoder_layer, num_layers=n_layers)
 
