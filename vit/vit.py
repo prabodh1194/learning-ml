@@ -43,6 +43,47 @@ def prefix_cls(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tens
 
 
 def add_pos_embed(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    pos_embed = nn.Parameter(torch.randn((1, embedded_patches.shape[1], embedded_patches.shape[2])))
+    pos_embed = nn.Parameter(
+        torch.randn((1, embedded_patches.shape[1], embedded_patches.shape[2]))
+    )
 
     return embedded_patches + pos_embed, pos_embed
+
+
+def encode(
+    x: torch.Tensor, n_layers: int, n_heads: int, d_model: int, hidden_dim: int
+) -> torch.Tensor:
+    encoder_layer = nn.TransformerEncoderLayer(
+        d_model=d_model, nhead=n_heads, dim_feedforward=hidden_dim, batch_first=True
+    )
+    encoder = nn.TransformerEncoder(encoder_layer, num_layers=n_layers)
+
+    return encoder(x)
+
+
+def classify(
+    x: torch.Tensor,
+    d_model: int,
+    num_classes: int,
+) -> tuple[torch.Tensor, nn.LayerNorm, nn.Linear]:
+    """
+    Take the CLS token output (position 0) and classify it:
+
+    Input:  (B, 65, d_model)
+                │
+                ▼ slice [:, 0, :]     ← grab just the CLS token
+            (B, d_model)
+                │
+                ▼ LayerNorm
+            (B, d_model)
+                │
+                ▼ Linear(d_model, 10)  ← 10 classes for CIFAR-10
+            (B, 10)                    ← logits (raw scores per class)
+    """
+
+    cls = x[:, 0, :]
+
+    layer_norm = nn.LayerNorm(d_model)
+    lin = nn.Linear(d_model, num_classes)
+
+    return lin(layer_norm(cls)), layer_norm, lin
