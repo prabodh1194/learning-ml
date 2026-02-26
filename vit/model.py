@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from vit.patch_embed import extract_patches, embed
+from vit.patch_embed import embed, extract_patches
 
 
 def prefix_cls(embedded_patches: torch.Tensor, cls_token: nn.Parameter) -> torch.Tensor:
