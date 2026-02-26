@@ -16,14 +16,13 @@ def extract_patches(images: torch.Tensor, patch_size: int) -> torch.Tensor:
     return patches.permute(0, 2, 4, 3, 5, 1).reshape(B, gh * gw, P * P * C)
 
 
-def embed(patches: torch.Tensor, d_model: int) -> tuple[torch.Tensor, nn.Linear]:
+def embed(patches: torch.Tensor, embedding_layer: nn.Linear) -> torch.Tensor:
     """
     we use a linear layer to embed the patches into our embedding vector. not the embedding module itself.
     cuz the embedding module in torch works on integer tokens, but in images, unlike text, the tokens are
     continuous floats, not discrete integers.
     """
-    embedding = nn.Linear(patches.shape[-1], d_model)
-    return embedding(patches), embedding
+    return embedding_layer(patches)
 
 
 if __name__ == "__main__":
@@ -34,5 +33,7 @@ if __name__ == "__main__":
 
     assert patches.shape == (2, 64, 48)
 
-    embedded, _ = embed(patches, 64)
+    d_model = 64
+    embedding_layer = nn.Linear(patches.shape[-1], d_model)
+    embedded, _ = embed(patches, embedding_layer)
     assert embedded.shape == (2, 64, 64)

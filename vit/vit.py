@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 
+from vit.patch_embed import extract_patches, embed
+
 
 def prefix_cls(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
     """
@@ -87,3 +89,19 @@ def classify(
     lin = nn.Linear(d_model, num_classes)
 
     return lin(layer_norm(cls)), layer_norm, lin
+
+
+class ViT(nn.Module):
+    def __init__(self, input_C: int, P: int, C: int):
+        super().__init__()
+        self.P = P
+        self.C = C
+
+        # the input image has a certain number of channels
+        patch_C = input_C * self.P * self.P
+
+        self.patch_embed_layer = nn.Linear(patch_C, self.C)
+
+    def forward(self, images: torch.Tensor):
+        x = extract_patches(images, self.P)
+        x = embed(x, self.patch_embed_layer)
