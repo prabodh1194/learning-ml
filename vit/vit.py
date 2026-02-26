@@ -40,3 +40,9 @@ def prefix_cls(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tens
     cls_token = nn.Parameter(torch.randn(1, 1, d_model)).expand(B, -1, -1)
 
     return torch.cat((cls_token, embedded_patches), dim=1), cls_token
+
+
+def add_pos_embed(embedded_patches: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    pos_embed = nn.Parameter(torch.randn((1, embedded_patches.shape[1], embedded_patches.shape[2])))
+
+    return embedded_patches + pos_embed, pos_embed
