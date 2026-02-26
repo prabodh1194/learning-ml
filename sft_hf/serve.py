@@ -7,6 +7,7 @@ Run: serve run sft_hf.serve:app
 from ray import serve
 from fastapi import FastAPI
 from pydantic import BaseModel
+from vllm import LLM, SamplingParams
 
 app = FastAPI()
 
@@ -23,8 +24,7 @@ class GenerateResponse(BaseModel):
 @serve.deployment
 @serve.ingress(app)
 class VLLMService:
-    def __init__(self, model_path: str = "sft-merged-hf", tensor_parallel_size: int = 1):
-        from vllm import LLM, SamplingParams
+    def __init__(self, model_path: str = "/Users/pbd/personal/learning-ml/sft_hf/sft-merged-hf", tensor_parallel_size: int = 1):
 
         self.llm = LLM(model=model_path, tensor_parallel_size=tensor_parallel_size)
         self.SamplingParams = SamplingParams
