@@ -1,10 +1,18 @@
 import logging
+import tempfile
 from pathlib import Path
 
 import ray
 import ray.data
 import torch
-from ray.train import RunConfig, ScalingConfig, get_context, get_dataset_shard, report
+from ray.train import (
+    Checkpoint,
+    RunConfig,
+    ScalingConfig,
+    get_context,
+    get_dataset_shard,
+    report,
+)
 from ray.train.torch import TorchTrainer, prepare_model
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pad_sequence
@@ -28,6 +36,29 @@ def collate_fn(batch: dict[str, list[list]]) -> dict[str, torch.Tensor]:
     )
 
     return {"input_ids": pt_input_ids, "labels": pt_labels}
+
+
+def checkpoint_lora(model, epoch):
+    if get_context().get_world_rank() != 0:
+        return None
+
+    tmpdir = tempfile.mkdtemp()
+    weights = save_lora_weights(model.module)
+    torch.save(weights, Path(tmpdir, "lora_adapters.pt"))
+    checkpoint = Checkpoint.from_directory(tmpdir)
+    logger.info(f"checkpointed LoRA weights (epoch {epoch})")
+    return checkpoint
+
+
+def save_lora_to_disk(model):
+    if get_context().get_world_rank() != 0:
+        return
+
+    weights = save_lora_weights(model.module)
+    out_path = Path("adapters/alpaca_ray.pt")
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    torch.save(weights, out_path)
+    logger.info(f"saved LoRA weights to {out_path.resolve()}")
 
 
 def train_func(config):
@@ -82,22 +113,23 @@ def train_func(config):
             if step % 50 == 0:
                 avg_loss = running_loss / running_steps
                 report({"epoch": epoch, "step": step, "loss": avg_loss})
-                logger.info(f"epoch {epoch} step {step}/{steps_per_epoch} loss {avg_loss:.4f}")
+                logger.info(
+                    f"epoch {epoch} step {step}/{steps_per_epoch} loss {avg_loss:.4f}"
+                )
                 running_loss = 0.0
                 running_steps = 0
 
         # End-of-epoch report with whatever's left
         if running_steps > 0:
             avg_loss = running_loss / running_steps
-            report({"epoch": epoch, "step": step, "loss": avg_loss, "epoch_end": True})
+            checkpoint = checkpoint_lora(model, epoch)
+            report(
+                {"epoch": epoch, "step": step, "loss": avg_loss, "epoch_end": True},
+                checkpoint=checkpoint,
+            )
             logger.info(f"epoch {epoch} done — step {step} loss {avg_loss:.4f}")
 
-    if get_context().get_world_rank() == 0:
-        weights = save_lora_weights(model.module)
-        out_path = Path("adapters/alpaca_ray.pt")
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(weights, out_path)
-        logger.info(f"saved LoRA weights to {out_path}")
+    save_lora_to_disk(model)
 
 
 if __name__ == "__main__":
@@ -109,7 +141,10 @@ if __name__ == "__main__":
 
     trainer = TorchTrainer(
         train_func,
-        train_loop_config={"total_rows": len(data_loader.examples), "num_workers": num_workers},
+        train_loop_config={
+            "total_rows": len(data_loader.examples),
+            "num_workers": num_workers,
+        },
         datasets={"train": alpaca_ds},
         scaling_config=ScalingConfig(num_workers=num_workers, use_gpu=True),
         run_config=RunConfig(name="lora-tinyllama"),
