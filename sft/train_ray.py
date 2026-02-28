@@ -42,23 +42,13 @@ def checkpoint_lora(model, epoch):
     if get_context().get_world_rank() != 0:
         return None
 
-    tmpdir = tempfile.mkdtemp()
-    weights = save_lora_weights(model.module)
-    torch.save(weights, Path(tmpdir, "lora_adapters.pt"))
-    checkpoint = Checkpoint.from_directory(tmpdir)
-    logger.info(f"checkpointed LoRA weights (epoch {epoch})")
-    return checkpoint
+    with tempfile.TemporaryDirectory() as tmpdir:
+        weights = save_lora_weights(model.module)
+        torch.save(weights, Path(tmpdir, "lora_adapters.pt"))
+        checkpoint = Checkpoint.from_directory(tmpdir)
+        logger.info(f"checkpointed LoRA weights (epoch {epoch})")
+        return checkpoint
 
-
-def save_lora_to_disk(model):
-    if get_context().get_world_rank() != 0:
-        return
-
-    weights = save_lora_weights(model.module)
-    out_path = Path("adapters/alpaca_ray.pt")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    torch.save(weights, out_path)
-    logger.info(f"saved LoRA weights to {out_path.resolve()}")
 
 
 def train_func(config):
@@ -128,8 +118,6 @@ def train_func(config):
                 checkpoint=checkpoint,
             )
             logger.info(f"epoch {epoch} done — step {step} loss {avg_loss:.4f}")
-
-    save_lora_to_disk(model)
 
 
 if __name__ == "__main__":
