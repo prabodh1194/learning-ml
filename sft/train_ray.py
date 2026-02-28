@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 
 import ray
 import ray.data
@@ -93,8 +94,10 @@ def train_func(config):
 
     if get_context().get_world_rank() == 0:
         weights = save_lora_weights(model.module)
-        torch.save(weights, "adapters/alpaca_ray.pt")
-        logger.info("saved LoRA weights to adapters/alpaca_ray.pt")
+        out_path = Path("adapters/alpaca_ray.pt")
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(weights, out_path)
+        logger.info(f"saved LoRA weights to {out_path}")
 
 
 if __name__ == "__main__":
