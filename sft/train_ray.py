@@ -3,7 +3,7 @@ import logging
 import ray
 import ray.data
 import torch
-from ray.train import RunConfig, ScalingConfig, get_dataset_shard, report
+from ray.train import RunConfig, ScalingConfig, get_context, get_dataset_shard, report
 from ray.train.torch import TorchTrainer, prepare_model
 from torch.nn import functional as F
 from torch.nn.utils.rnn import pad_sequence
@@ -11,9 +11,9 @@ from transformers import AutoTokenizer
 
 from sft.dataset import AlpacaDataset
 from sft.load_tinyllama import load
-from sft.lora_llama import apply_lora
+from sft.lora_llama import apply_lora, save_lora_weights
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("sft.train_ray")
 
 
 def collate_fn(batch: dict[str, list[list]]) -> dict[str, torch.Tensor]:
@@ -90,6 +90,11 @@ def train_func(config):
             avg_loss = running_loss / running_steps
             report({"epoch": epoch, "step": step, "loss": avg_loss, "epoch_end": True})
             logger.info(f"epoch {epoch} done — step {step} loss {avg_loss:.4f}")
+
+    if get_context().get_world_rank() == 0:
+        weights = save_lora_weights(model.module)
+        torch.save(weights, "adapters/alpaca_ray.pt")
+        logger.info("saved LoRA weights to adapters/alpaca_ray.pt")
 
 
 if __name__ == "__main__":
