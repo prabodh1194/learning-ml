@@ -1,7 +1,7 @@
 import itertools
 import torch
 
-from transformers import AutoTokenizer, TokenizersBackend
+from transformers import AutoTokenizer
 from pathlib import Path
 
 from llama.block import LLaMABlock

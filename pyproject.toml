@@ -13,7 +13,7 @@ dependencies = [
     "pandas-stubs~=3.0.0",
     "pillow>=12.1.1",
     "pydantic>=2.12.5",
-    "ray[serve]>=2.54.0",
+    "ray[serve]==2.51.0",
     "safetensors>=0.7.0",
     "torch>=2.9.1",
     "torchvision>=0.25.0",

@@ -2,6 +2,7 @@ import logging
 from pathlib import Path
 
 import safetensors
+from huggingface_hub import hf_hub_download
 from transformers import AutoTokenizer
 
 from llama.block import LLaMABlock
@@ -30,10 +31,13 @@ def load(freeze: bool = False) -> LLaMA:
         num_kv_head=4,
     )
 
+    safetensors_path = hf_hub_download(
+        repo_id="TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+        filename="model.safetensors",
+    )
+
     logger.info("Loading weights from safetensors...")
-    with safetensors.safe_open(
-        MODEL_DIR / "models/tinyllama-1.1b/model.safetensors", framework="pt"
-    ) as f:
+    with safetensors.safe_open(safetensors_path, framework="pt") as f:
         model.embed.weight.data.copy_(f.get_tensor("model.embed_tokens.weight"))
 
         layer: LLaMABlock

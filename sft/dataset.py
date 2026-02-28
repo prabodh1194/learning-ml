@@ -2,7 +2,7 @@ import logging
 
 from datasets import load_dataset
 from torch.utils.data import Dataset
-from transformers import AutoTokenizer, TokenizersBackend
+from transformers import AutoTokenizer
 
 from sft.load_tinyllama import MODEL_DIR
 
@@ -22,7 +22,7 @@ PROMPT_TEMPLATE_WITH_INPUT = """### Instruction:
 {output}</s>"""
 
 def tokenize_with_mask(
-    example: dict, tokenizer: TokenizersBackend, max_length: int = 512
+    example: dict, tokenizer, max_length: int = 512
 ):
     prompt = format_example(example, skip_response=True)
     response = f"{example['output']}</s>"
@@ -70,7 +70,7 @@ def format_example(example: dict, skip_response: bool = False) -> str:
 class AlpacaDataset(Dataset):
     def __init__(
         self,
-        tokenizer: TokenizersBackend,
+        tokenizer,
         max_length: int = 512,
         split: str = "train",
     ) -> None:

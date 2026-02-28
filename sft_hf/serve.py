@@ -24,7 +24,7 @@ class GenerateResponse(BaseModel):
 @serve.deployment
 @serve.ingress(app)
 class VLLMService:
-    def __init__(self, model_path: str = "/Users/pbd/personal/learning-ml/sft_hf/sft-merged-hf", tensor_parallel_size: int = 1):
+    def __init__(self, model_path: str = "/Users/pbd/personal/learning-ml/sft-merged-hf", tensor_parallel_size: int = 1):
 
         self.llm = LLM(model=model_path, tensor_parallel_size=tensor_parallel_size)
         self.SamplingParams = SamplingParams
