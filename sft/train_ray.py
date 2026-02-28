@@ -62,12 +62,14 @@ def train_func(config):
             input_ids = batch["input_ids"]
             labels = batch["labels"]
 
-            logits, *_ = model(input_ids)
-            loss = F.cross_entropy(
-                logits[:, :-1, :].reshape(-1, 32000),
-                labels[:, 1:].reshape(-1),
-                ignore_index=-100,
-            )
+            with torch.amp.autocast("cuda", dtype=torch.bfloat16):
+                logits, *_ = model(input_ids)
+                loss = F.cross_entropy(
+                    logits[:, :-1, :].reshape(-1, 32000),
+                    labels[:, 1:].reshape(-1),
+                    ignore_index=-100,
+                )
+
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
