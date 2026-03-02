@@ -117,16 +117,22 @@ class ViT(nn.Module):
         self.classifier_norm = nn.LayerNorm(self.C)
         self.classifier_head = nn.Linear(self.C, num_classes)
 
+    @property
+    def skip_classify(self) -> bool:
+        return False
+
     def forward(self, images: torch.Tensor):
         x = extract_patches(images, self.P)
         x = embed(x, self.patch_embed_layer)
         x = prefix_cls(x, self.cls_token)
         x = x + self.pos_embed
         x = self.encoder(x)
-        x = classify(
-            x,
-            self.classifier_norm,
-            self.classifier_head,
-        )
+
+        if not self.skip_classify:
+            x = classify(
+                x,
+                self.classifier_norm,
+                self.classifier_head,
+            )
 
         return x
