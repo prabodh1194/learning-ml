@@ -11,12 +11,13 @@ class TextEncoder(nn.Module):
 
         self.embedding = nn.Embedding(vocab_size, self.C)
         self.position_embedding = nn.Parameter(torch.randn(1, self.T, self.C))
-        self.mask = torch.nn.Transformer.generate_square_subsequent_mask(77)
+        self.register_buffer("mask", torch.nn.Transformer.generate_square_subsequent_mask(77))
 
         _encoder_layer = nn.TransformerEncoderLayer(
             self.C,
             nhead=n_head,
             dim_feedforward=hidden_dim,
+            batch_first=True,
         )
         norm = nn.LayerNorm(self.C)
 

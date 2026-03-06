@@ -6,6 +6,7 @@ Flickr30k: 30k images, 5 captions each — small enough to iterate fast on M3.
 """
 
 import logging
+import os
 from datetime import datetime
 
 import torch
@@ -91,6 +92,8 @@ def train():
     log_file = open("clip/training_log.csv", "w")
     log_file.write("step,epoch,timestamp,loss,diag_sim,offdiag_sim\n")
 
+    os.makedirs("clip/checkpoints", exist_ok=True)
+
     for epoch in range(20):
         for step, (images, token_ids) in enumerate(train_loader):
             images, token_ids = images.to(device), token_ids.to(device)
@@ -118,6 +121,18 @@ def train():
                     f"[{now}] epoch {epoch} | step {step}/{total_batches} | "
                     f"loss: {loss.item():.4f} | diag_sim: {diag:.4f} | offdiag_sim: {offdiag:.4f}"
                 )
+
+            global_step = epoch * total_batches + step
+            if global_step > 0 and global_step % 300 == 0:
+                ckpt_path = f"clip/checkpoints/clip_step_{global_step}.pt"
+                torch.save({
+                    "model": model.state_dict(),
+                    "loss_fn": loss_fn.state_dict(),
+                    "optimizer": optimizer.state_dict(),
+                    "epoch": epoch,
+                    "step": step,
+                }, ckpt_path)
+                log.info(f"checkpoint saved: {ckpt_path}")
 
         log.info(f"epoch {epoch} done | loss: {loss.item():.4f}")
 
