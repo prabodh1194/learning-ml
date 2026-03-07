@@ -37,7 +37,7 @@ log σ² = -1.2
 import torch
 
 
-def reparameterize(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+def reparameterize(*, mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
     # 1. compute σ from log σ²
     # 2. sample ε ~ N(0, 1) with torch.randn_like
     # 3. return μ + σ * ε

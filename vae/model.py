@@ -20,16 +20,18 @@ Full VAE forward pass:
 """
 
 import torch
+from torch import nn
 
 from vae.decoder import Decoder
 from vae.encoder import Encoder
 from vae.reparameterize import reparameterize
 
 
-class VAE:
+class VAE(nn.Module):
     def __init__(
         self, *, input_dim: int, latent_dim: int, hidden_dim: int, output_dim: int
     ) -> None:
+        super().__init__()
         self.encoder = Encoder(
             input_dim=input_dim, latent_dim=latent_dim, hidden_dim=hidden_dim
         )
@@ -38,9 +40,11 @@ class VAE:
             latent_dim=latent_dim, output_dim=output_dim, hidden_dim=hidden_dim
         )
 
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, image: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         mu, log_var = self.encoder(image)
-        x = reparameterize(log_var, mu)
-        x = self.decoder(x)
+        x = reparameterize(log_var=log_var, mu=mu)
+        reconstructed = self.decoder(x)
 
-        return x
+        return reconstructed, mu, log_var
