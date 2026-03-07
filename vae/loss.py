@@ -57,10 +57,10 @@ class VAELoss:
         original: torch.Tensor,
         mu: torch.Tensor,
         log_var: torch.Tensor,
-    ) -> torch.Tensor:
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         recon_loss = torch.nn.functional.binary_cross_entropy(
             reconstructed, original, reduction="sum"
         )
         kl = -0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum()
 
-        return recon_loss + kl * self.beta
+        return recon_loss + kl * self.beta, recon_loss, kl

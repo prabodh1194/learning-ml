@@ -101,7 +101,7 @@ def train():
             )  # flatten (B, 1, 28, 28) → (B, 784)
 
             reconstructed, mu, log_var = model(images)
-            loss = loss_fn.forward(reconstructed, images, mu, log_var)
+            loss, recon, kl = loss_fn.forward(reconstructed, images, mu, log_var)
 
             optimizer.zero_grad()
             loss.backward()
@@ -109,22 +109,15 @@ def train():
 
             now = datetime.now().strftime("%H:%M:%S")
 
-            # log individual loss components
-            with torch.no_grad():
-                recon = torch.nn.functional.binary_cross_entropy(
-                    reconstructed, images, reduction="sum"
-                ).item()
-                kl = (-0.5 * (1 + log_var - mu.pow(2) - log_var.exp()).sum()).item()
-
             log_file.write(
-                f"{step},{epoch},{now},{loss.item():.4f},{recon:.4f},{kl:.4f}\n"
+                f"{step},{epoch},{now},{loss.item():.4f},{recon.item():.4f},{kl.item():.4f}\n"
             )
             log_file.flush()
 
             if step % 100 == 0:
                 log.info(
                     f"[{now}] epoch {epoch} | step {step}/{total_batches} | "
-                    f"loss: {loss.item():.1f} | recon: {recon:.1f} | kl: {kl:.1f}"
+                    f"loss: {loss.item():.1f} | recon: {recon.item():.1f} | kl: {kl.item():.1f}"
                 )
 
             global_step = epoch * total_batches + step
