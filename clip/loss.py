@@ -79,7 +79,7 @@ class ClipLoss(nn.Module):
         self.temperature = nn.Parameter((torch.ones(1) / 0.07).log())
 
     def forward(self, images: torch.Tensor, texts: torch.Tensor):
-        logits = images @ texts.T / self.temperature
+        logits = images @ texts.T * self.temperature.exp()
         labels = torch.arange(logits.shape[0], device=logits.device)
 
         loss = (F.cross_entropy(logits, labels) + F.cross_entropy(logits.T, labels)) / 2
