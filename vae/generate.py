@@ -3,6 +3,63 @@ Generate new digits from a trained VAE checkpoint.
 
 Usage:
   PYTHONPATH=$PWD uv run python vae/generate.py vae/checkpoints/vae_final.pt
+
+⏺ The key insight: after training, you only need the decoder.
+
+  During TRAINING:
+    real image → encoder → μ, log σ² → reparameterize → z → decoder → reconstructed image
+    \_________________________________________/          \_________________________/
+          "learn what z should look like"                "learn to draw from z"
+
+  During GENERATION:
+    z ~ N(0,1) → decoder → NEW image
+    \_________/   \____________________/
+    random noise   decoder already knows
+                   how to draw from z!
+
+  Why does this work? Because of the KL term in the loss:
+
+  KL forces the encoder to output distributions close to N(0, 1)
+
+  So during training, the decoder learned to handle z values
+  that look like N(0, 1) samples.
+
+  After training:
+    - The decoder has seen thousands of z values ~ N(0, 1)
+    - It learned: z near [-2, 1] → draw a "7"
+    - It learned: z near [1, -1] → draw a "0"
+    - etc.
+
+  So if you just SAMPLE from N(0, 1) and feed it to the decoder,
+  it already knows what to do!
+
+  Look at your latent space plot — it confirms this:
+
+                z[1]
+                 ↑
+            9    |    7
+         5       |
+      ───────────┼──────────→ z[0]
+            4    |
+         3    6  |  0   1
+                 |    2
+
+  When you sample z = [-2, 1], the decoder sees
+  "this is where 9s live" → draws a 9
+
+  When you sample z = [1, -1], the decoder sees
+  "this is where 0s live" → draws a 0
+
+  Without the KL term, the encoder could map digits to arbitrary locations (like μ=500 for "3" and μ=-1000 for "7"). Then sampling from N(0,1) would land you in empty space — the decoder would never have seen
+  those z values during training.
+
+  Without KL:  encoder maps to random locations
+               N(0,1) samples land in HOLES → garbage output
+
+  With KL:     encoder maps near N(0,1)
+               N(0,1) samples land where training data lives → valid digits!
+
+  That's the whole trick — KL makes the latent space match the distribution you'll sample from at generation time.
 """
 
 import sys
