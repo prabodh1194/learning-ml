@@ -20,7 +20,7 @@ DO THIS:      ε = sample from N(0, 1)           ← random, but NOT in the grap
 
          μ ────────────┐
                        ├──▶ z = μ + σ * ε ──▶ decoder ──▶ loss
-         σ ────────────┘         ↑
+         σ ────────────┘                ↑
                                  ε ~ N(0,1)   ← external randomness
                                  (no grad needed)
 
@@ -33,3 +33,15 @@ log σ² = -1.2
 σ²     = exp(-1.2) = 0.30
 σ      = exp(-1.2 / 2) = exp(0.5 * log_var) = 0.55
 """
+
+import torch
+
+
+def reparameterize(mu: torch.Tensor, log_var: torch.Tensor) -> torch.Tensor:
+    # 1. compute σ from log σ²
+    # 2. sample ε ~ N(0, 1) with torch.randn_like
+    # 3. return μ + σ * ε
+    std = torch.exp(0.5 * log_var)
+    eps = torch.randn_like(std)
+
+    return mu + eps * std
