@@ -199,7 +199,9 @@ result = torch.multinomial(probs, num_samples=1) # spin it once
         return result  # (B, 1)
 
     @torch.inference_mode()
-    def generate(self, idx, max_new_tokens, temperature=1.0, decode_fn=None, eos_token_id=2):
+    def generate(
+        self, idx, max_new_tokens, temperature=1.0, decode_fn=None, eos_token_id=2
+    ):
         original_len = idx.shape[1]
 
         for _ in range(max_new_tokens):

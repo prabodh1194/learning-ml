@@ -73,7 +73,7 @@ def train():
         input_C=3,
         patch_size=4,
         image_d_model=64,
-        image_seq_len=65,       # (32/4)^2 + 1 CLS = 65
+        image_seq_len=65,  # (32/4)^2 + 1 CLS = 65
         image_mlp_dim=256,
         image_n_heads=4,
         image_n_layers=4,
@@ -109,11 +109,15 @@ def train():
             with torch.no_grad():
                 sim = image_embed @ text_embed.T
                 diag = sim.diag().mean().item()
-                offdiag = (sim.sum() - sim.diag().sum()) / (sim.shape[0] * (sim.shape[0] - 1))
+                offdiag = (sim.sum() - sim.diag().sum()) / (
+                    sim.shape[0] * (sim.shape[0] - 1)
+                )
                 offdiag = offdiag.item()
 
             now = datetime.now().strftime("%H:%M:%S")
-            log_file.write(f"{step},{epoch},{now},{loss.item():.4f},{diag:.4f},{offdiag:.4f}\n")
+            log_file.write(
+                f"{step},{epoch},{now},{loss.item():.4f},{diag:.4f},{offdiag:.4f}\n"
+            )
             log_file.flush()
 
             if step % 10 == 0:
@@ -125,13 +129,16 @@ def train():
             global_step = epoch * total_batches + step
             if global_step > 0 and global_step % 300 == 0:
                 ckpt_path = f"clip/checkpoints/clip_step_{global_step}.pt"
-                torch.save({
-                    "model": model.state_dict(),
-                    "loss_fn": loss_fn.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "epoch": epoch,
-                    "step": step,
-                }, ckpt_path)
+                torch.save(
+                    {
+                        "model": model.state_dict(),
+                        "loss_fn": loss_fn.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "epoch": epoch,
+                        "step": step,
+                    },
+                    ckpt_path,
+                )
                 log.info(f"checkpoint saved: {ckpt_path}")
 
         log.info(f"epoch {epoch} done | loss: {loss.item():.4f}")

@@ -21,9 +21,8 @@ PROMPT_TEMPLATE_WITH_INPUT = """### Instruction:
 ### Response:
 {output}</s>"""
 
-def tokenize_with_mask(
-    example: dict, tokenizer, max_length: int = 512
-):
+
+def tokenize_with_mask(example: dict, tokenizer, max_length: int = 512):
     prompt = format_example(example, skip_response=True)
     response = f"{example['output']}</s>"
 
@@ -43,7 +42,6 @@ def tokenize_with_mask(
         "input_ids": input_ids,
         "labels": labels,
     }
-
 
 
 def format_example(example: dict, skip_response: bool = False) -> str:

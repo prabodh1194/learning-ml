@@ -43,7 +43,10 @@ def train():
             kl_loss = distillation_loss(teacher_logits, student_logits, temperature)
             ce_loss = F.cross_entropy(
                 student_logits[:, :-1, :].reshape(-1, 32000),
-                torch.tensor(batch["labels"]).unsqueeze(0).to(device)[:, 1:].reshape(-1),
+                torch.tensor(batch["labels"])
+                .unsqueeze(0)
+                .to(device)[:, 1:]
+                .reshape(-1),
                 ignore_index=-100,
             )
 

@@ -18,8 +18,16 @@ logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
 
 CIFAR10_CLASSES = [
-    "airplane", "automobile", "bird", "cat", "deer",
-    "dog", "frog", "horse", "ship", "truck",
+    "airplane",
+    "automobile",
+    "bird",
+    "cat",
+    "deer",
+    "dog",
+    "frog",
+    "horse",
+    "ship",
+    "truck",
 ]
 
 
@@ -63,7 +71,9 @@ def encode_class_prompts(model: CLIP, device: str) -> torch.Tensor:
     token_ids = tokens["input_ids"].to(device)  # (10, 77)
 
     with torch.no_grad():
-        text_embeds = model.text_projection(model.text_encoder(token_ids))  # (10, embed_dim)
+        text_embeds = model.text_projection(
+            model.text_encoder(token_ids)
+        )  # (10, embed_dim)
 
     return text_embeds
 
@@ -78,7 +88,9 @@ def zero_shot_classify(
     returns: predicted class indices (B,)
     """
     with torch.no_grad():
-        image_embeds = model.image_projection(model.image_encoder(images))  # (B, embed_dim)
+        image_embeds = model.image_projection(
+            model.image_encoder(images)
+        )  # (B, embed_dim)
 
     similarities = image_embeds @ text_embeds.T  # (B, num_classes)
     return similarities.argmax(dim=-1)  # (B,)
@@ -94,11 +106,13 @@ def evaluate():
     log.info("encoding class prompts...")
     text_embeds = encode_class_prompts(model, device)
 
-    transform = transforms.Compose([
-        transforms.Resize((32, 32)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((32, 32)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ]
+    )
 
     test_set = datasets.CIFAR10(
         root="./datasets_cache", train=False, download=True, transform=transform
@@ -115,7 +129,7 @@ def evaluate():
 
     acc = 100 * correct / total
     log.info(f"zero-shot accuracy on CIFAR-10: {acc:.2f}% ({correct}/{total})")
-    log.info(f"random baseline: 10.00%")
+    log.info("random baseline: 10.00%")
 
 
 if __name__ == "__main__":

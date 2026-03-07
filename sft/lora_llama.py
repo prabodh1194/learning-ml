@@ -79,7 +79,9 @@ if __name__ == "__main__":
             break
 
         # Format as instruction prompt
-        prompt = format_example({"instruction": instruction, "input": "", "output": ""}, skip_response=True)
+        prompt = format_example(
+            {"instruction": instruction, "input": "", "output": ""}, skip_response=True
+        )
         input_ids = tokenizer.encode(prompt, return_tensors="pt").to("mps")
 
         # Generate and decode all at once for proper spacing

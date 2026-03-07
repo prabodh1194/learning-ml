@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 
-r'''
+r"""
 KL(P || Q) = Σ P(x) × log(P(x) / Q(x))
            = Σ P(x) × (log(P(x)) - log(Q(x)))
            = Σ P(x) × log(P(x)) - Σ P(x) × log(Q(x))
@@ -13,7 +13,7 @@ KL(P || Q) = Σ P(x) × log(P(x) / Q(x))
 - Q = student (predicted distribution)
 
 P, Q are already softmaxxed
-'''
+"""
 
 
 def kl_div_np(p: np.ndarray, q: np.ndarray) -> float:

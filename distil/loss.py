@@ -13,11 +13,13 @@ def soft_targets(logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor
     return logits.softmax(dim=-1)
 
 
-def distillation_loss(teacher_logits: torch.Tensor, student_logits: torch.Tensor, temperature: float = 1.0) -> torch.Tensor:
+def distillation_loss(
+    teacher_logits: torch.Tensor, student_logits: torch.Tensor, temperature: float = 1.0
+) -> torch.Tensor:
     p = soft_targets(teacher_logits, temperature)
     q = soft_targets(student_logits, temperature)
 
-    return kl_div_pt(p, q) * (temperature ** 2)  # temperature scaling for stability
+    return kl_div_pt(p, q) * (temperature**2)  # temperature scaling for stability
 
 
 if __name__ == "__main__":

@@ -54,7 +54,11 @@ if __name__ == "__main__":
 
             logits, *_ = model(input_ids)
 
-            loss = F.cross_entropy(logits[:, :-1, :].reshape(-1, 32000), labels[:, 1:].reshape(-1), ignore_index=-100)
+            loss = F.cross_entropy(
+                logits[:, :-1, :].reshape(-1, 32000),
+                labels[:, 1:].reshape(-1),
+                ignore_index=-100,
+            )
             loss = loss / accum_steps  # scale loss for accumulation
             loss.backward()
             accum_loss += loss.item()
@@ -71,7 +75,11 @@ if __name__ == "__main__":
                 log_file.flush()
 
                 # Live counter
-                print(f"\r[{now}] step {step} | epoch {epoch} | loss: {accum_loss:.4f}", end="", flush=True)
+                print(
+                    f"\r[{now}] step {step} | epoch {epoch} | loss: {accum_loss:.4f}",
+                    end="",
+                    flush=True,
+                )
 
                 # Sticky log every 50 steps
                 if step % 50 == 0:
