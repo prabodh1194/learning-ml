@@ -27,7 +27,7 @@ from torch import nn
 
 
 class Decoder(nn.Module):
-    def __init__(self, latent_dim: int, output_dim: int, hidden_dim: int) -> None:
+    def __init__(self, *, latent_dim: int, output_dim: int, hidden_dim: int) -> None:
         super().__init__()
 
         self.latent_dim = latent_dim
