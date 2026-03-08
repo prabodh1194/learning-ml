@@ -106,6 +106,8 @@ nn.MaxPool2d(2)
 import torch
 from torch import nn
 
+from diffusion.time_embedding import sinusoidal_embedding
+
 
 class DownBlock(nn.Module):
     def __init__(self, in_channels: int, out_channels: int):
@@ -139,3 +141,55 @@ class UpBlock(nn.Module):
         x = self.relu(self.conv2(x))
 
         return x
+
+
+class UNet(nn.Module):
+    def __init__(self, *, in_ch: int = 3, time_dim: int = 256):
+        super().__init__()
+        # time embedding: Linear(time_dim, time_dim)
+        self.time_mlp = nn.Sequential(
+            nn.Linear(time_dim, time_dim),
+            nn.ReLU(),
+        )
+        self.time_proj = nn.Linear(time_dim, 128)
+        self.time_dim = time_dim
+
+        # down1: DownBlock(3, 64)
+        # down2: DownBlock(64, 128)
+        self.down1 = DownBlock(3, 64)
+        self.down2 = DownBlock(64, 128)
+
+        # bottleneck: Conv2d(128, 256, 3, pad=1), Conv2d(256, 128, 3, pad=1)
+        self.bot1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bot2 = nn.Conv2d(256, 128, kernel_size=3, padding=1)
+
+        # up1: UpBlock(256, 64)    ← 128 + 128(skip2) = 256
+        # up2: UpBlock(128, 64)    ← 64 + 64(skip1) = 128
+        self.up1 = UpBlock(256, 64)
+        self.up2 = UpBlock(128, 64)
+
+        # final: Conv2d(64, 3, kernel_size=1)
+        self.final = nn.Conv2d(64, in_ch, kernel_size=3, padding=1)
+
+    def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
+        # 1. time embedding: sinusoidal_embedding(t, time_dim) → Linear → ReLU
+        t_emb = sinusoidal_embedding(t, self.time_dim)  # (B, 256)
+        t_emb = self.time_mlp(t_emb)  # (B, 256)
+
+        # 2. down path:
+        x, skip1 = self.down1(x)  # (B, 64, 16, 16), skip1=(B, 64, 32, 32)
+        x, skip2 = self.down2(x)  # (B, 128, 8, 8),  skip2=(B, 128, 16, 16)
+
+        #
+        # 3. bottleneck + inject time
+        x = torch.relu(self.bot1(x))  # (B, 256, 8, 8)
+        x = torch.relu(self.bot2(x))  # (B, 128, 8, 8)
+        t_emb = self.time_proj(t_emb)[:, :, None, None]  # (B, 128, 1, 1)
+        x = x + t_emb  # broadcasts over H, W
+
+        # 4. up path
+        x = self.up1(x=x, skip=skip2)  # (B, 64, 16, 16)
+        x = self.up2(x=x, skip=skip1)  # (B, 64, 32, 32)
+
+        # 5. final conv
+        return self.final(x)  # (B, 3, 32, 32)
