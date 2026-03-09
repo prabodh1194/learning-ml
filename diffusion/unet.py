@@ -1,4 +1,5 @@
 """
+
 Image (B, 3, 32, 32)
     │
     ▼
@@ -101,6 +102,76 @@ nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
 nn.MaxPool2d(2)
   takes every 2×2 block → keeps the max → halves H and W
 
+### how is the time embedding used?
+
+  t = 500
+    │
+    ▼
+  sinusoidal_embedding     ← FIXED (no learnable params, just math)
+    │                         sin/cos at different frequencies
+    │                         same input always gives same output
+    ▼
+  (B, 256) vector
+    │
+    ▼
+  Linear + ReLU            ← LEARNED (backprop updates these weights)
+    │                         learns "what about the timestep matters
+    ▼                          for denoising?"
+  (B, 256) vector
+    │
+    ▼
+  time_proj Linear         ← LEARNED (projects to 128 channels)
+    │
+    ▼
+  add into bottleneck
+
+  The sinusoidal part just gives each timestep a unique, fixed fingerprint. The MLP on top learns what to do with it.
+
+  Same split as in your transformer — positional encoding was fixed sin/cos, and the network learned how to use it.
+
+### about skips & convs
+
+- Bigger models can have more convs / block. every layer conv can detect finer detail
+- skip is just defined as the layer penultimate to maxpool.
+
+You can stack as many convs as you want before the pool and use the last one as the skip:
+
+  conv1 → relu
+  conv2 → relu
+  conv3 → relu
+  conv4 → relu → skip
+  MaxPool → next block
+
+  More convs = the network detects more complex patterns at that resolution before moving on. But the tradeoff:
+
+  More convs per block:
+    + richer features
+    - more parameters
+    - slower training
+    - risk of overfitting on small datasets
+
+  For CIFAR-10 (32×32, 50k images), 2 convs per block is the sweet spot. Bigger models (like for 256×256 images) often use 3-4 convs per block because they have more data and more spatial detail to process.
+
+### scaling law
+
+More resolution = more levels to the U:
+
+  Our tiny U-Net (32×32 CIFAR-10):
+    32 → 16 → 8              2 down blocks, 2 up blocks
+
+  Medium U-Net (256×256):
+    256 → 128 → 64 → 32 → 16     4 down blocks, 4 up blocks
+
+  Large U-Net (512×512):
+    512 → 256 → 128 → 64 → 32 → 16    5 down blocks, 5 up blocks
+
+  Each level halves the spatial size, so you need enough levels to compress the image down to a small bottleneck. And at each level, they also use more channels:
+
+  Ours:       3 → 64 → 128          (tiny)
+  Stable Diffusion:  320 → 640 → 1280 → 1280   (massive)
+
+  More blocks + more channels + more convs per block = bigger model = better quality but way more compute.
+
 """
 
 import torch
@@ -146,13 +217,14 @@ class UpBlock(nn.Module):
 class UNet(nn.Module):
     def __init__(self, *, in_ch: int = 3, time_dim: int = 256):
         super().__init__()
+        self.time_dim = time_dim
+
         # time embedding: Linear(time_dim, time_dim)
         self.time_mlp = nn.Sequential(
-            nn.Linear(time_dim, time_dim),
+            nn.Linear(self.time_dim, self.time_dim),
             nn.ReLU(),
         )
-        self.time_proj = nn.Linear(time_dim, 128)
-        self.time_dim = time_dim
+        self.time_proj = nn.Linear(self.time_dim, 128)
 
         # down1: DownBlock(3, 64)
         # down2: DownBlock(64, 128)
