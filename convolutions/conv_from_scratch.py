@@ -1,4 +1,6 @@
 import numpy as np
+import torch
+import torch.nn as nn
 
 from mnist.mnist_loader.loader import load_mnist
 
@@ -55,6 +57,18 @@ def naive_conv2d(
     return output
 
 
+def multichannel_conv2d(*, image: np.ndarray, kernels: np.ndarray) -> np.ndarray:
+    C_in, H, W = image.shape
+    C_out, _, K, _ = kernels.shape  # (C_out, C_in, K, K)
+    output = np.zeros((C_out, H - K + 1, W - K + 1))
+
+    for o in range(C_out):
+        for c in range(C_in):
+            output[o] += naive_conv2d(image=image[c], kernel=kernels[o][c])
+
+    return output
+
+
 if __name__ == "__main__":
     X_train, _, X_test, _ = load_mnist(path="mnist-dataset")
     vertical_edge_detector_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
@@ -97,3 +111,25 @@ if __name__ == "__main__":
     )
 
     print("All shape checks passed!")
+
+    # Verify multichannel_conv2d against torch.nn.Conv2d
+
+    # MNIST image: (28, 28) → (1, 28, 28) to simulate 1 input channel
+    mc_image = X_train[0].astype(np.float32)[np.newaxis, :, :]  # (1, 28, 28)
+
+    conv = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, bias=False)
+    weights = conv.weight.detach().numpy()  # (16, 1, 3, 3)
+
+    our_output = multichannel_conv2d(image=mc_image, kernels=weights)
+    torch_output = (
+        conv(torch.tensor(mc_image[np.newaxis])).detach().numpy()[0]
+    )  # remove batch dim
+
+    assert our_output.shape == torch_output.shape, (
+        f"{our_output.shape} != {torch_output.shape}"
+    )
+    assert np.allclose(our_output, torch_output, atol=1e-5), "Values don't match torch!"
+
+    print(
+        f"Multichannel check passed! Shape: {our_output.shape}, values match torch.nn.Conv2d"
+    )
