@@ -20,7 +20,9 @@ def read_idx_images(filename: str) -> npt.NDArray[np.uint8]:
     - Bytes 4-7: Number of images
     - Bytes 8-11: Number of rows (28)
     - Bytes 12-15: Number of columns (28)
-    - Bytes 16+: Pixel values (0-255), one byte per pixel
+    - Bytes 16+: Pixel values (0-255), one byte per pixel.
+      - grayscale is rendered when R=G=B. Hence, a byte say 12 = (12, 12, 12) on RGB.
+        that's how grays are rendered.
 
     What's happening:
     1. Open the file in binary read mode
@@ -98,11 +100,11 @@ def load_mnist(
     5. Return all four arrays
     """
     # Training data: 60,000 examples
-    X_train = read_idx_images(os.path.join(path, "train-images.idx3-ubyte"))
-    y_train = read_idx_labels(os.path.join(path, "train-labels.idx1-ubyte"))
+    X_train = read_idx_images(os.path.join(path, "train-images-idx3-ubyte"))
+    y_train = read_idx_labels(os.path.join(path, "train-labels-idx1-ubyte"))
 
     # Test data: 10,000 examples
-    X_test = read_idx_images(os.path.join(path, "t10k-images.idx3-ubyte"))
-    y_test = read_idx_labels(os.path.join(path, "t10k-labels.idx1-ubyte"))
+    X_test = read_idx_images(os.path.join(path, "t10k-images-idx3-ubyte"))
+    y_test = read_idx_labels(os.path.join(path, "t10k-labels-idx1-ubyte"))
 
     return X_train, y_train, X_test, y_test
