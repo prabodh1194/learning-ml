@@ -1,8 +1,13 @@
 """
 
-Image (B, 3, 32, 32)
-    │
-    ▼
+Image (B, 3, 32, 32)          Timestep t (B,)
+    │                              │
+    ▼                              ▼
+    │                    sinusoidal_embedding(t, 256)  → (B, 256)
+    │                              │
+    │                    Linear(256→256) + ReLU        → (B, 256)
+    │                              │
+    ▼                              │ (time travels alongside)
 ┌──────────────────────────────────────┐
 │ Down Block 1                         │
 │   Conv2d(3→64, 3×3, pad=1) + ReLU    │  (B, 64, 32, 32)
@@ -23,6 +28,12 @@ Image (B, 3, 32, 32)
 │ Bottleneck                           │           │
 │   Conv2d(128→256, 3×3, pad=1)+ ReLU  │  (B,256, 8, 8)
 │   Conv2d(256→128, 3×3, pad=1)+ ReLU  │  (B,128, 8, 8)
+│                                      │           │
+│   + time injection:                  │           │
+│     Linear(256→128)                  │  (B,128)  │
+│     reshape to (B,128,1,1)           │           │
+│     add to feature map               │  (B,128, 8, 8)
+│     (broadcasts across all pixels)   │           │
 └──────────────────────────────────────┘           │
     │                                              │
     ▼                                              │
@@ -219,12 +230,12 @@ class UNet(nn.Module):
         super().__init__()
         self.time_dim = time_dim
 
-        # time embedding: Linear(time_dim, time_dim)
+        # time embedding: sinusoidal → Linear → ReLU → Linear → (B, 128)
         self.time_mlp = nn.Sequential(
             nn.Linear(self.time_dim, self.time_dim),
             nn.ReLU(),
+            nn.Linear(self.time_dim, 128),
         )
-        self.time_proj = nn.Linear(self.time_dim, 128)
 
         # down1: DownBlock(3, 64)
         # down2: DownBlock(64, 128)
@@ -244,9 +255,9 @@ class UNet(nn.Module):
         self.final = nn.Conv2d(64, in_ch, kernel_size=3, padding=1)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
-        # 1. time embedding: sinusoidal_embedding(t, time_dim) → Linear → ReLU
+        # 1. time embedding
         t_emb = sinusoidal_embedding(t, self.time_dim)  # (B, 256)
-        t_emb = self.time_mlp(t_emb)  # (B, 256)
+        t_emb = self.time_mlp(t_emb)  # (B, 128)
 
         # 2. down path:
         x, skip1 = self.down1(x)  # (B, 64, 16, 16), skip1=(B, 64, 32, 32)
@@ -256,8 +267,7 @@ class UNet(nn.Module):
         # 3. bottleneck + inject time
         x = torch.relu(self.bot1(x))  # (B, 256, 8, 8)
         x = torch.relu(self.bot2(x))  # (B, 128, 8, 8)
-        t_emb = self.time_proj(t_emb)[:, :, None, None]  # (B, 128, 1, 1)
-        x = x + t_emb  # broadcasts over H, W
+        x = x + t_emb[:, :, None, None]  # broadcasts over H, W
 
         # 4. up path
         x = self.up1(x=x, skip=skip2)  # (B, 64, 16, 16)
