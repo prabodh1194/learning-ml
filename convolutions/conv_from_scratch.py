@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.nn import ConvTranspose2d
 
 from mnist.mnist_loader.loader import load_mnist
 
@@ -69,6 +70,61 @@ def multichannel_conv2d(*, image: np.ndarray, kernels: np.ndarray) -> np.ndarray
     return output
 
 
+def conv_transpose(image: torch.Tensor) -> torch.Tensor:
+    """
+    What is ConvTranspose2d actually doing?
+
+    In regular conv with stride=2, you read a patch and skip positions → output gets smaller:
+
+    Input (6x6):
+    [x x x] . . .     → output[0]
+    . . [x x x] .     → output[1]
+    . . . . [x x x]   → output[2]
+
+    6 → 3  (halved)
+
+    ConvTranspose2d with stride=2 does the reverse operation. Each input value gets multiplied by the kernel and placed into the output, spaced stride apart:
+
+    Input (3 values):  [A]  [B]  [C]
+
+    Step 1: Place A's kernel output starting at position 0
+    Step 2: Place B's kernel output starting at position 2  (stride=2)
+    Step 3: Place C's kernel output starting at position 4
+
+    With kernel_size=2:
+      A writes to [0, 1]
+      B writes to [2, 3]
+      C writes to [4, 5]
+
+    Output: 6 values.  3 → 6 (doubled)
+
+    Where patches overlap, values get summed.
+
+    The formula
+
+    output = (input - 1) * stride - 2*padding + kernel_size
+
+    With input=14, stride=2, padding=0, kernel=2:
+      (14 - 1) * 2 - 0 + 2 = 28
+
+    What to write
+
+    A function that:
+    1. Takes a (1, 1, 14, 14) tensor (fake data, just torch.randn)
+    2. Passes through ConvTranspose2d(1, 1, kernel_size=2, stride=2)
+    3. Asserts output is (1, 1, 28, 28)
+    4. Then does the round-trip: Conv2d(stride=2) down, ConvTranspose2d(stride=2) back up, assert same spatial size
+
+    The (1, 1, 14, 14) means: batch=1, channels=1, height=14, width=14. PyTorch conv layers always expect this 4D shape.
+
+    Go ahead and try again.
+    """
+    cn = ConvTranspose2d(in_channels=1, out_channels=1, kernel_size=2, stride=2)
+    val = cn(image)
+
+    return val
+
+
 if __name__ == "__main__":
     X_train, _, X_test, _ = load_mnist(path="mnist-dataset")
     vertical_edge_detector_kernel = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]])
@@ -133,3 +189,5 @@ if __name__ == "__main__":
     print(
         f"Multichannel check passed! Shape: {our_output.shape}, values match torch.nn.Conv2d"
     )
+
+    assert conv_transpose(torch.randn((1, 1, 14, 14))).shape == (1, 1, 28, 28)
