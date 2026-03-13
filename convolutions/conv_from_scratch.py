@@ -191,3 +191,83 @@ if __name__ == "__main__":
     )
 
     assert conv_transpose(torch.randn((1, 1, 14, 14))).shape == (1, 1, 28, 28)
+
+    # --- Conv Backprop ---
+    # Forward: output[i,j] = sum(input[i:i+K, j:j+K] * kernel)
+    # Backward receives dL/d_output. We need:
+    #   dL/d_kernel = convolve input with d_output
+    #   dL/d_input  = convolve d_output (padded) with flipped kernel  ← this IS transposed conv
+
+    def conv_forward(image, kernel):
+        K = kernel.shape[0]
+        H, W = image.shape
+        out_h, out_w = H - K + 1, W - K + 1
+        output = np.zeros((out_h, out_w))
+        for i in range(out_h):
+            for j in range(out_w):
+                output[i, j] = (image[i : i + K, j : j + K] * kernel).sum()
+        return output, (image, kernel)
+
+    def conv_backward(d_output, cache):
+        image, kernel = cache
+        K = kernel.shape[0]
+
+        # dL/d_kernel: convolve input with d_output
+        d_kernel = np.zeros_like(kernel)
+        for ki in range(K):
+            for kj in range(K):
+                d_kernel[ki, kj] = (
+                    d_output
+                    * image[ki : ki + d_output.shape[0], kj : kj + d_output.shape[1]]
+                ).sum()
+
+        # dL/d_input: "full" convolution of d_output with flipped kernel
+        #             pad d_output by K-1 on each side, convolve with flipped kernel
+        flipped = np.flip(kernel)
+        padded = np.pad(d_output, K - 1)
+        d_input = np.zeros_like(image)
+        for i in range(d_input.shape[0]):
+            for j in range(d_input.shape[1]):
+                d_input[i, j] = (padded[i : i + K, j : j + K] * flipped).sum()
+
+        return d_input, d_kernel
+
+    # Verify with finite differences
+    test_image = np.random.randn(8, 8)
+    test_kernel = np.random.randn(3, 3)
+    epsilon = 1e-5
+
+    output, cache = conv_forward(test_image, test_kernel)
+    # Use sum of output as our scalar loss
+    d_output = np.ones_like(output)
+    d_input, d_kernel = conv_backward(d_output, cache)
+
+    # Check d_kernel via finite differences
+    for ki in range(3):
+        for kj in range(3):
+            test_kernel[ki, kj] += epsilon
+            out_plus, _ = conv_forward(test_image, test_kernel)
+            test_kernel[ki, kj] -= 2 * epsilon
+            out_minus, _ = conv_forward(test_image, test_kernel)
+            test_kernel[ki, kj] += epsilon  # restore
+
+            numerical = (out_plus.sum() - out_minus.sum()) / (2 * epsilon)
+            assert abs(numerical - d_kernel[ki, kj]) < 1e-5, (
+                f"d_kernel[{ki},{kj}] off: {numerical} vs {d_kernel[ki, kj]}"
+            )
+
+    # Check d_input via finite differences
+    for i in range(8):
+        for j in range(8):
+            test_image[i, j] += epsilon
+            out_plus, _ = conv_forward(test_image, test_kernel)
+            test_image[i, j] -= 2 * epsilon
+            out_minus, _ = conv_forward(test_image, test_kernel)
+            test_image[i, j] += epsilon  # restore
+
+            numerical = (out_plus.sum() - out_minus.sum()) / (2 * epsilon)
+            assert abs(numerical - d_input[i, j]) < 1e-5, (
+                f"d_input[{i},{j}] off: {numerical} vs {d_input[i, j]}"
+            )
+
+    print("Conv backprop: all finite difference checks passed!")
