@@ -24,6 +24,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
+from config import DATASETS_CACHE
 from diffusion.forward import forward_diffusion
 from diffusion.noise_schedule import linear_noise_schedule
 from diffusion.unet import UNet
@@ -49,7 +50,7 @@ def train():
         ]
     )
     train_set = datasets.CIFAR10(
-        root="./datasets_cache", train=True, download=True, transform=transform
+        root=DATASETS_CACHE, train=True, download=True, transform=transform
     )
     train_loader = DataLoader(train_set, batch_size=B, shuffle=True)
     total_batches = len(train_loader)

@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 import torchvision
 from torchvision import transforms
 
+from config import DATASETS_CACHE
 from vit.model import ViT
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -29,7 +30,7 @@ def train():
     )
 
     train_set = torchvision.datasets.CIFAR10(
-        root="./datasets_cache", train=True, download=True, transform=transform
+        root=DATASETS_CACHE, train=True, download=True, transform=transform
     )
 
     train_loader = DataLoader(train_set, batch_size=128, shuffle=True)

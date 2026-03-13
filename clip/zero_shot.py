@@ -13,6 +13,7 @@ from torchvision import datasets, transforms
 from transformers import CLIPTokenizer
 
 from clip.model import CLIP
+from config import DATASETS_CACHE
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 log = logging.getLogger(__name__)
@@ -115,7 +116,7 @@ def evaluate():
     )
 
     test_set = datasets.CIFAR10(
-        root="./datasets_cache", train=False, download=True, transform=transform
+        root=DATASETS_CACHE, train=False, download=True, transform=transform
     )
     test_loader = DataLoader(test_set, batch_size=256, shuffle=False)
 

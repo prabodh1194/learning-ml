@@ -16,6 +16,7 @@ from torchvision import datasets, transforms
 from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 
+from config import DATASETS_CACHE
 from vae.model import VAE
 from vae.loss import VAELoss
 
@@ -35,7 +36,7 @@ def generate_digits(model: VAE, device: str):
 def plot_latent_space(model: VAE, device: str):
     transform = transforms.Compose([transforms.ToTensor()])
     test_set = datasets.MNIST(
-        root="./datasets_cache", train=False, download=True, transform=transform
+        root=DATASETS_CACHE, train=False, download=True, transform=transform
     )
     test_loader = DataLoader(test_set, batch_size=1000, shuffle=False)
 
@@ -73,7 +74,7 @@ def train():
     )
 
     train_set = datasets.MNIST(
-        root="./datasets_cache", train=True, download=True, transform=transform
+        root=DATASETS_CACHE, train=True, download=True, transform=transform
     )
     train_loader = DataLoader(train_set, batch_size=128, shuffle=True)
     total_batches = len(train_loader)
