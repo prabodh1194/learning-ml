@@ -67,6 +67,11 @@ def sample(
         # 4. denoise at t & add some new noise.
         x = x_denoised + beta[t].sqrt() * z
 
+        if t % 10 == 0:
+            from datetime import datetime
+
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] step {T - t}/{T}")
+
     # 5. clamp to [-1, 1] and rescale to [0, 1] for visualization
     return (x.clamp(-1, 1) + 1) / 2
 
@@ -83,9 +88,17 @@ if __name__ == "__main__":
 
     model = UNet().to(device)
     ckpt = torch.load(
-        "diffusion/checkpoints/ddpm_final.pt", weights_only=True, map_location=device
+        "diffusion/checkpoints/ddpm_step_3600.pt",
+        weights_only=True,
+        map_location=device,
     )
     model.load_state_dict(ckpt["model"])
+
+    # 3840x2160 with 32x32 tiles = 120x68 = 8160 tiles
+    # generate 20%, then randomly duplicate to fill
+    n_cols, n_rows = 120, 68
+    n_total = n_cols * n_rows
+    n_unique = int(n_total * 0.2)  # 3264
 
     images = sample(
         model,
@@ -94,8 +107,12 @@ if __name__ == "__main__":
         alpha=alpha,
         alpha_bar=alpha_bar,
         device=device,
-        n_images=16,
+        n_images=n_unique,
     )
 
-    save_image(images, "outputs/generated.png", nrow=4)
-    print("saved → outputs/generated.png")
+    # randomly pick from generated images to fill the full grid
+    indices = torch.randint(0, n_unique, (n_total,))
+    grid = images[indices]
+
+    save_image(grid, "diffusion/outputs/wallpaper_4k.png", nrow=n_cols, padding=0)
+    print("saved → diffusion/outputs/wallpaper_4k.png")
