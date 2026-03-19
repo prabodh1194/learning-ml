@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from vae.reparameterize import reparameterize
+
 
 class Encoder(nn.Module):
     def __init__(self):
@@ -68,3 +70,17 @@ class Decoder(nn.Module):
         x = torch.tanh(self.conv3(x))
 
         return x
+
+
+class VAE(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.encoder = Encoder()
+        self.decoder = Decoder()
+
+    def forward(
+        self, image: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        mu, log_var = self.encoder(image)
+        x = reparameterize(mu=mu, log_var=log_var)
+        return self.decoder(x), mu, log_var
