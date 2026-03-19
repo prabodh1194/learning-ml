@@ -72,7 +72,7 @@ class Decoder(nn.Module):
         return x
 
 
-class VAE(nn.Module):
+class ConvVAE(nn.Module):
     def __init__(self):
         super().__init__()
         self.encoder = Encoder()
@@ -84,3 +84,16 @@ class VAE(nn.Module):
         mu, log_var = self.encoder(image)
         x = reparameterize(mu=mu, log_var=log_var)
         return self.decoder(x), mu, log_var
+
+
+def conv_vae_loss(
+    *,
+    orig_image: torch.Tensor,
+    cons_image: torch.Tensor,
+    mu: torch.Tensor,
+    log_var: torch.Tensor,
+) -> torch.Tensor:
+    recon_loss = F.mse_loss(cons_image, orig_image)
+    kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+
+    return recon_loss + kl_loss
