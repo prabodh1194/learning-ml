@@ -9,26 +9,21 @@ class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # (C=3, H, W) -> (C=32, H'=H//2, W'=W//2)
-        self.conv1 = nn.Conv2d(
-            in_channels=3, out_channels=32, kernel_size=3, stride=2, padding=1
-        )
+        # (3, 32, 32) -> (64, 16, 16)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1)
+        # (64, 16, 16) -> (128, 8, 8)
+        self.conv2 = nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1)
+        # (128, 8, 8) -> (256, 4, 4)
+        self.conv3 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
 
-        # (C=32, H', W') -> (C=64, H'//2, W'//2)
-        self.conv2 = nn.Conv2d(
-            in_channels=32, out_channels=64, kernel_size=3, stride=2, padding=1
-        )
-
-        self.conv_mu = nn.Conv2d(
-            in_channels=64, out_channels=4, kernel_size=3, stride=1, padding=1
-        )
-        self.conv_log_var = nn.Conv2d(
-            in_channels=64, out_channels=4, kernel_size=3, stride=1, padding=1
-        )
+        # parallel heads: (256, 4, 4) -> (4, 4, 4)
+        self.conv_mu = nn.Conv2d(256, 4, kernel_size=3, stride=1, padding=1)
+        self.conv_log_var = nn.Conv2d(256, 4, kernel_size=3, stride=1, padding=1)
 
     def forward(self, image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         x = F.relu(self.conv1(image))
         x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
 
         mu = self.conv_mu(x)
         log_var = self.conv_log_var(x)
@@ -40,34 +35,27 @@ class Decoder(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # (C=4, H, W) -> (C=64, H'=2 * H, W'=2 * W)
+        # (4, 4, 4) -> (256, 8, 8)
         self.conv1 = nn.ConvTranspose2d(
-            in_channels=4,
-            out_channels=64,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            output_padding=1,
+            4, 256, kernel_size=3, stride=2, padding=1, output_padding=1
         )
-
-        # (C=64, H', W') -> (C=32, H''=2 * H', W'' = 2 * W')
+        # (256, 8, 8) -> (128, 16, 16)
         self.conv2 = nn.ConvTranspose2d(
-            in_channels=64,
-            out_channels=32,
-            kernel_size=3,
-            stride=2,
-            padding=1,
-            output_padding=1,
+            256, 128, kernel_size=3, stride=2, padding=1, output_padding=1
+        )
+        # (128, 16, 16) -> (64, 32, 32)
+        self.conv3 = nn.ConvTranspose2d(
+            128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
         )
 
-        self.conv3 = nn.Conv2d(
-            in_channels=32, out_channels=3, kernel_size=3, stride=1, padding=1
-        )
+        # (64, 32, 32) -> (3, 32, 32)
+        self.conv_out = nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1)
 
     def forward(self, image: torch.Tensor) -> torch.Tensor:
         x = F.relu(self.conv1(image))
         x = F.relu(self.conv2(x))
-        x = torch.tanh(self.conv3(x))
+        x = F.relu(self.conv3(x))
+        x = torch.tanh(self.conv_out(x))
 
         return x
 
