@@ -192,7 +192,7 @@ from diffusion.time_embedding import sinusoidal_embedding
 
 
 class DownBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int):
+    def __init__(self, *, in_channels: int, out_channels: int):
         super().__init__()
 
         self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
@@ -239,8 +239,8 @@ class UNet(nn.Module):
 
         # down1: DownBlock(3, 64)
         # down2: DownBlock(64, 128)
-        self.down1 = DownBlock(3, 64)
-        self.down2 = DownBlock(64, 128)
+        self.down1 = DownBlock(in_channels=3, out_channels=64)
+        self.down2 = DownBlock(in_channels=64, out_channels=128)
 
         # bottleneck: Conv2d(128, 256, 3, pad=1), Conv2d(256, 128, 3, pad=1)
         self.bot1 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
