@@ -32,3 +32,39 @@ class Encoder(nn.Module):
         log_var = self.conv_log_var(x)
 
         return mu, log_var
+
+
+class Decoder(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        # (C=4, H, W) -> (C=64, H'=2 * H, W'=2 * W)
+        self.conv1 = nn.ConvTranspose2d(
+            in_channels=4,
+            out_channels=64,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            output_padding=1,
+        )
+
+        # (C=64, H', W') -> (C=32, H''=2 * H', W'' = 2 * W')
+        self.conv2 = nn.ConvTranspose2d(
+            in_channels=64,
+            out_channels=32,
+            kernel_size=3,
+            stride=2,
+            padding=1,
+            output_padding=1,
+        )
+
+        self.conv3 = nn.Conv2d(
+            in_channels=32, out_channels=3, kernel_size=3, stride=1, padding=1
+        )
+
+    def forward(self, image: torch.Tensor) -> torch.Tensor:
+        x = F.relu(self.conv1(image))
+        x = F.relu(self.conv2(x))
+        x = torch.tanh(self.conv3(x))
+
+        return x
