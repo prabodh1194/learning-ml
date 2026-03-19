@@ -13,7 +13,7 @@ class UNet(nn.Module):
         self.time_mlp = nn.Sequential(
             nn.Linear(self.time_dim, self.time_dim),
             nn.ReLU(),
-            nn.Linear(self.time_dim, 128),
+            nn.Linear(self.time_dim, 64),
         )
 
         self.down1 = DownBlock(in_channels=in_ch, out_channels=64)

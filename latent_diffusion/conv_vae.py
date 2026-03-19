@@ -74,6 +74,6 @@ def conv_vae_loss(
     log_var: torch.Tensor,
 ) -> torch.Tensor:
     recon_loss = F.mse_loss(cons_image, orig_image)
-    kl_loss = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp())
+    kl_loss = -0.5 * torch.mean(1 + log_var - mu.pow(2) - log_var.exp())
 
     return recon_loss + kl_loss
