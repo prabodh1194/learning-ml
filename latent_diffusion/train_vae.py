@@ -7,7 +7,7 @@ from latent_diffusion.conv_vae import ConvVAE, conv_vae_loss
 DEVICE = "mps"
 BATCH_SIZE = 128
 LR = 1e-4
-EPOCHS = 25
+EPOCHS = 200
 CHECKPOINT_EVERY = 300
 
 
