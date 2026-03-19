@@ -14,8 +14,8 @@ def sample(unet, vae, *, beta, alpha, alpha_bar, device, n_images):
     unet.eval()
     vae.eval()
 
-    # 1. pure noise in latent space (4, 8, 8)
-    z = torch.randn(n_images, 4, 8, 8, device=device)
+    # 1. pure noise in latent space (8, 8, 8)
+    z = torch.randn(n_images, 8, 8, 8, device=device)
 
     # 2. reverse diffusion loop
     for t in reversed(range(T)):
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     vae.load_state_dict(vae_ckpt["model"])
 
     # load U-Net
-    unet = UNet(in_ch=4).to(DEVICE)
+    unet = UNet(in_ch=8).to(DEVICE)
     ldm_ckpt = torch.load(
         "latent_diffusion/checkpoints/ldm_final.pt", map_location=DEVICE
     )

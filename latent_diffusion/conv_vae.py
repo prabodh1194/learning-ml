@@ -9,47 +9,93 @@ class Encoder(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # (3, 32, 32) -> (128, 16, 16)
-        self.conv1 = nn.Conv2d(3, 128, kernel_size=3, stride=2, padding=1)
-        # (128, 16, 16) -> (256, 8, 8)
-        self.conv2 = nn.Conv2d(128, 256, kernel_size=3, stride=2, padding=1)
+        # (3, 32, 32) → process at 32x32
+        self.conv1a = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        self.bn1a = nn.BatchNorm2d(64)
+        self.conv1b = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn1b = nn.BatchNorm2d(64)
+        # downsample → (64, 16, 16)
+        self.down1 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1)
 
-        # parallel heads: (256, 8, 8) -> (4, 8, 8)
-        self.conv_mu = nn.Conv2d(256, 4, kernel_size=3, stride=1, padding=1)
-        self.conv_log_var = nn.Conv2d(256, 4, kernel_size=3, stride=1, padding=1)
+        # process at 16x16
+        self.conv2a = nn.Conv2d(64, 128, kernel_size=3, padding=1)
+        self.bn2a = nn.BatchNorm2d(128)
+        self.conv2b = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn2b = nn.BatchNorm2d(128)
+        # downsample → (128, 8, 8)
+        self.down2 = nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=1)
+
+        # process at 8x8
+        self.conv3a = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.bn3a = nn.BatchNorm2d(256)
+        self.conv3b = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn3b = nn.BatchNorm2d(256)
+
+        # parallel heads: (256, 8, 8) → (8, 8, 8)
+        self.conv_mu = nn.Conv2d(256, 8, kernel_size=3, padding=1)
+        self.conv_log_var = nn.Conv2d(256, 8, kernel_size=3, padding=1)
 
     def forward(self, image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        x = F.relu(self.conv1(image))
-        x = F.relu(self.conv2(x))
+        x = F.relu(self.bn1a(self.conv1a(image)))
+        x = F.relu(self.bn1b(self.conv1b(x)))
+        x = self.down1(x)
 
-        mu = self.conv_mu(x)
-        log_var = self.conv_log_var(x)
+        x = F.relu(self.bn2a(self.conv2a(x)))
+        x = F.relu(self.bn2b(self.conv2b(x)))
+        x = self.down2(x)
 
-        return mu, log_var
+        x = F.relu(self.bn3a(self.conv3a(x)))
+        x = F.relu(self.bn3b(self.conv3b(x)))
+
+        return self.conv_mu(x), self.conv_log_var(x)
 
 
 class Decoder(nn.Module):
     def __init__(self):
         super().__init__()
 
-        # (4, 8, 8) -> (256, 16, 16)
-        self.conv1 = nn.ConvTranspose2d(
-            4, 256, kernel_size=3, stride=2, padding=1, output_padding=1
-        )
-        # (256, 16, 16) -> (128, 32, 32)
-        self.conv2 = nn.ConvTranspose2d(
+        # (8, 8, 8) → process at 8x8
+        self.conv1a = nn.Conv2d(8, 256, kernel_size=3, padding=1)
+        self.bn1a = nn.BatchNorm2d(256)
+        self.conv1b = nn.Conv2d(256, 256, kernel_size=3, padding=1)
+        self.bn1b = nn.BatchNorm2d(256)
+
+        # upsample → (256, 16, 16)
+        self.up1 = nn.ConvTranspose2d(
             256, 128, kernel_size=3, stride=2, padding=1, output_padding=1
         )
+        # process at 16x16
+        self.conv2a = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn2a = nn.BatchNorm2d(128)
+        self.conv2b = nn.Conv2d(128, 128, kernel_size=3, padding=1)
+        self.bn2b = nn.BatchNorm2d(128)
 
-        # (128, 32, 32) -> (3, 32, 32)
-        self.conv_out = nn.Conv2d(128, 3, kernel_size=3, stride=1, padding=1)
+        # upsample → (128, 32, 32)
+        self.up2 = nn.ConvTranspose2d(
+            128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
+        )
+        # process at 32x32
+        self.conv3a = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn3a = nn.BatchNorm2d(64)
+        self.conv3b = nn.Conv2d(64, 64, kernel_size=3, padding=1)
+        self.bn3b = nn.BatchNorm2d(64)
 
-    def forward(self, image: torch.Tensor) -> torch.Tensor:
-        x = F.relu(self.conv1(image))
-        x = F.relu(self.conv2(x))
-        x = torch.tanh(self.conv_out(x))
+        # final → (3, 32, 32)
+        self.conv_out = nn.Conv2d(64, 3, kernel_size=3, padding=1)
 
-        return x
+    def forward(self, z: torch.Tensor) -> torch.Tensor:
+        x = F.relu(self.bn1a(self.conv1a(z)))
+        x = F.relu(self.bn1b(self.conv1b(x)))
+
+        x = self.up1(x)
+        x = F.relu(self.bn2a(self.conv2a(x)))
+        x = F.relu(self.bn2b(self.conv2b(x)))
+
+        x = self.up2(x)
+        x = F.relu(self.bn3a(self.conv3a(x)))
+        x = F.relu(self.bn3b(self.conv3b(x)))
+
+        return torch.tanh(self.conv_out(x))
 
 
 class ConvVAE(nn.Module):

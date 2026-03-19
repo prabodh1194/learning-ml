@@ -44,7 +44,7 @@ def train():
     alpha_bar = alpha_bar.to(DEVICE)
 
     # 3. U-Net for latent diffusion
-    unet = UNet(in_ch=4).to(DEVICE)
+    unet = UNet(in_ch=8).to(DEVICE)
     optimizer = torch.optim.Adam(unet.parameters(), lr=LR)
 
     dataloader = get_cifar10()
