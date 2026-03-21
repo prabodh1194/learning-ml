@@ -46,7 +46,9 @@ def mlm_mask(
 
     # random_replace.sum() is a count of the items to be replaced.
     # we can generate only enough random tokens that are required to be filled.
-    masked_tokens[random_replace] = torch.randint(0, vocab_size, (random_replace.sum()))
+    masked_tokens[random_replace] = torch.randint(
+        0, vocab_size, (random_replace.sum(),)
+    ).to(masked_tokens.device)
 
     return masked_tokens, labels
 
