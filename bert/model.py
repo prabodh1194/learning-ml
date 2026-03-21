@@ -1,6 +1,9 @@
 import torch
 from torch import nn
 
+from bert.embedding import BertEmbedding
+from bert.block import BertBlock
+
 
 class BERT(nn.Module):
     """
@@ -27,19 +30,22 @@ class BERT(nn.Module):
         dropout: float = 0.1,
     ):
         super().__init__()
-        # TODO: BertEmbedding
-        # TODO: nn.ModuleList of BertBlocks
-        # TODO: final LayerNorm
-        pass
+        self.embed = BertEmbedding(vocab_size, d_model, max_seq_len, dropout)
+        self.layers = nn.ModuleList(
+            [BertBlock(d_model, n_heads, ffn_dim, dropout) for _ in range(n_layers)]
+        )
+        self.norm = nn.LayerNorm(d_model)
 
     def forward(
-        self, input_ids: torch.Tensor, token_type_ids: torch.Tensor | None = None
+        self, input_ids: torch.Tensor, token_type_ids: torch.Tensor
     ) -> torch.Tensor:
         """
         input_ids:      (B, seq_len)
-        token_type_ids: (B, seq_len) or None
+        token_type_ids: (B, seq_len)
 
         Returns: (B, seq_len, d_model) — hidden states for ALL tokens
         """
-        # TODO: embed → blocks → norm → return
-        pass
+        x = self.embed(input_ids, token_type_ids)
+        for layer in self.layers:
+            x = layer(x)
+        return self.norm(x)

@@ -22,8 +22,7 @@ class ClassificationHead(nn.Module):
 
     def __init__(self, d_model: int, num_classes: int):
         super().__init__()
-        # TODO: Linear(d_model, num_classes)
-        pass
+        self.linear = nn.Linear(d_model, num_classes)
 
     def forward(self, hidden_states: torch.Tensor) -> torch.Tensor:
         """
@@ -31,5 +30,4 @@ class ClassificationHead(nn.Module):
 
         Returns: (B, num_classes) — classification logits
         """
-        # TODO: extract CLS token (index 0), pass through linear
-        pass
+        return self.linear(hidden_states[:, 0, :])
