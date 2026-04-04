@@ -42,7 +42,7 @@ SARSA      = realistic, safer, slower
 
 - `GridWorld`: 3x4 grid, goal(+1), pit(-1), wall. row/col movement logic.
 - `QAgent`: Q-table, epsilon-greedy, Bellman update, epsilon decay.
-- Training: 10k episodes. Win rate 0% → 100% by episode 300.
+- Training: 500 episodes. Win rate 0% → 99% by episode 300. Converges in ~10.
 
 ## Key Observations from Training
 
