@@ -23,6 +23,10 @@ Grid world - environment:
     └────┴────┴────┴────┘
 """
 
+import random
+
+import numpy as np
+
 
 class GridWorld:
     ACTION = {
@@ -69,3 +73,34 @@ class GridWorld:
     def reset(self) -> int:
         self.state = 0
         return self.state
+
+
+class QAgent:
+    def __init__(
+        self,
+        n_states: int = 12,
+        n_actions: int = 4,
+        alpha: float = 0.1,
+        gamma: float = 0.99,
+        eps: float = 1.0,
+    ) -> None:
+        self.q = np.zeros((n_states, n_actions))
+        self.alpha = alpha
+        self.gamma = gamma
+        self.eps = eps
+
+    def choose_action(self, state: int) -> int:
+        choice = random.random()
+
+        if choice < self.eps:
+            return random.randint(0, 3)
+        return int(np.argmax(self.q[state]))
+
+    def learn(self, state: int, action: int, reward: float, next_state: int) -> None:
+        self.q[state][action] += self.alpha * (
+            reward + self.gamma * self.q[next_state].max() - self.q[state][action]
+        )
+
+    def decay_epsilon(self) -> None:
+        self.eps *= 0.995
+        self.eps = max(self.eps, 0.01)
