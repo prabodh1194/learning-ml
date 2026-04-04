@@ -24,6 +24,7 @@ Grid world - environment:
 """
 
 import random
+from pathlib import Path
 
 import numpy as np
 
@@ -101,6 +102,147 @@ class QAgent:
             reward + self.gamma * self.q[next_state].max() - self.q[state][action]
         )
 
+    ARROWS = {0: "↑", 1: "→", 2: "↓", 3: "←"}
+    SPECIALS = {3: " G", 5: "XX", 7: " P"}
+
     def decay_epsilon(self) -> None:
         self.eps *= 0.995
         self.eps = max(self.eps, 0.01)
+
+    def policy_grid(self) -> str:
+        rows = []
+        for s in range(self.q.shape[0]):
+            if s % 4 == 0:
+                rows.append("  ")
+            if s in self.SPECIALS:
+                rows.append(f" {self.SPECIALS[s]} ")
+            else:
+                best = int(np.argmax(self.q[s]))
+                rows.append(f"  {self.ARROWS[best]} ")
+            if s % 4 == 3:
+                rows.append("\n")
+        return "".join(rows)
+
+    def value_grid(self) -> str:
+        rows = []
+        for s in range(self.q.shape[0]):
+            if s % 4 == 0:
+                rows.append("  ")
+            if s in self.SPECIALS:
+                rows.append(f" {self.SPECIALS[s]:>5}")
+            else:
+                rows.append(f" {self.q[s].max():5.2f}")
+            if s % 4 == 3:
+                rows.append("\n")
+        return "".join(rows)
+
+    def __repr__(self) -> str:
+        return f"Policy:\n{self.policy_grid()}Q-Values:\n{self.value_grid()}"
+
+
+def train():
+    env = GridWorld(r=3, c=4)
+    agent = QAgent()
+
+    wr = 0
+    snapshots = []
+
+    for episode in range(500):
+        state = env.reset()
+        done = False
+
+        while not done:
+            action = agent.choose_action(state)
+            next_state, reward, done = env.step(action)
+            agent.learn(state, action, reward, next_state)
+            state = next_state
+
+            if done and reward == 1:
+                wr += 1
+
+        if episode % 100 == 0:
+            print(f"Episode {episode:>5} | win rate: {wr:>3}% | eps: {agent.eps:.3f}")
+            wr = 0
+
+        snapshots.append((episode, agent.q.copy()))
+
+        agent.decay_epsilon()
+
+    print()
+    print(agent)
+
+    animate(snapshots)
+
+
+def animate(snapshots: list[tuple[int, np.ndarray]]):
+    import matplotlib.pyplot as plt
+    from matplotlib.animation import FuncAnimation
+    from matplotlib.colors import TwoSlopeNorm
+
+    specials = {3: "G", 5: "X", 7: "P"}
+    arrows = {0: "↑", 1: "→", 2: "↓", 3: "←"}
+
+    fig, (ax_val, ax_pol) = plt.subplots(1, 2, figsize=(10, 4))
+    title = fig.suptitle("Episode 0", fontsize=14)
+
+    norm = TwoSlopeNorm(vmin=-1, vcenter=0, vmax=1)
+
+    def draw(frame):
+        episode, q = snapshots[frame]
+        title.set_text(f"Episode {episode}")
+
+        # --- Q-value heatmap ---
+        ax_val.clear()
+        grid = q.max(axis=1).reshape(3, 4)
+        ax_val.imshow(grid, cmap="RdYlGn", norm=norm)
+        ax_val.set_title("Q-Values (max)")
+        ax_val.set_xticks([])
+        ax_val.set_yticks([])
+        for s in range(12):
+            r, c = s // 4, s % 4
+            if s in specials:
+                ax_val.text(
+                    c,
+                    r,
+                    specials[s],
+                    ha="center",
+                    va="center",
+                    fontsize=16,
+                    fontweight="bold",
+                )
+            else:
+                ax_val.text(
+                    c, r, f"{grid[r, c]:.2f}", ha="center", va="center", fontsize=11
+                )
+
+        # --- policy arrows ---
+        ax_pol.clear()
+        ax_pol.imshow(grid, cmap="RdYlGn", norm=norm, alpha=0.3)
+        ax_pol.set_title("Policy (best action)")
+        ax_pol.set_xticks([])
+        ax_pol.set_yticks([])
+        for s in range(12):
+            r, c = s // 4, s % 4
+            if s in specials:
+                ax_pol.text(
+                    c,
+                    r,
+                    specials[s],
+                    ha="center",
+                    va="center",
+                    fontsize=16,
+                    fontweight="bold",
+                )
+            else:
+                best = int(np.argmax(q[s]))
+                ax_pol.text(c, r, arrows[best], ha="center", va="center", fontsize=20)
+
+    anim = FuncAnimation(fig, draw, frames=len(snapshots), interval=150, repeat=True)
+    out = Path(__file__).parent / "q_learning_progress.gif"
+    anim.save(out, writer="pillow", fps=6)
+    print(f"Animation saved to {out}")
+    plt.show()
+
+
+if __name__ == "__main__":
+    train()

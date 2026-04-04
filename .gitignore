@@ -15,3 +15,4 @@ mnist-dataset
 
 *.pt
 training_log.csv
+*.gif
