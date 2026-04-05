@@ -13,8 +13,8 @@ class _DQNAgent:
     def __init__(
         self,
         *,
-        n_states: int = 12,
-        n_actions: int = 4,
+        n_states: int = 4,
+        n_actions: int = 2,
         hidden: int = 64,
         lr: float = 1e-3,
         gamma: float = 0.99,
@@ -41,29 +41,21 @@ class _DQNAgent:
 
         self.eps = eps
         self.gamma = gamma
-
         self.n_actions = n_actions
-        self.n_states = n_states
 
     def choose_action(self, state: np.ndarray) -> int:
-        choice = random.random()
-
-        if choice < self.eps:
+        if random.random() < self.eps:
             return random.randint(0, self.n_actions - 1)
-        else:
-            x = torch.FloatTensor(state).unsqueeze(0)
-            self.online_net.eval()
-            with torch.no_grad():
-                return self.online_net(x).argmax().item()
+        x = torch.FloatTensor(state).unsqueeze(0)
+        with torch.no_grad():
+            return self.online_net(x).argmax().item()
 
     def learn(self, batch: tuple[np.ndarray, ...]):
-        self.online_net.train()
         states, _actions, _rewards, next_states, _dones = batch
 
         actions = torch.LongTensor(_actions).unsqueeze(1)
         rewards = torch.FloatTensor(_rewards)
         dones = torch.FloatTensor(_dones)
-
         s = torch.FloatTensor(states)
         ns = torch.FloatTensor(next_states)
 
@@ -78,7 +70,6 @@ class _DQNAgent:
 
         self.optimizer.zero_grad()
         loss.backward()
-        nn.utils.clip_grad_norm_(self.online_net.parameters(), max_norm=10)
         self.optimizer.step()
 
     def sync_target(self) -> None:
@@ -91,15 +82,12 @@ class _DQNAgent:
 
 def train():
     env = gym.make("CartPole-v1")
-    agent = _DQNAgent(
-        n_states=4,
-        n_actions=2,
-    )
+    agent = _DQNAgent()
     buffer = ReplayBuffer(capacity=10_000)
     step = 0
     rewards_history = []
 
-    for episode in range(3_000):
+    for episode in range(1_000):
         state, _ = env.reset()
         done = False
         total_reward = 0
@@ -121,8 +109,7 @@ def train():
                 agent.learn(buffer.sample(32))
 
             step += 1
-
-            if step % 1000 == 0:
+            if step % 100 == 0:
                 agent.sync_target()
 
             state = next_state
