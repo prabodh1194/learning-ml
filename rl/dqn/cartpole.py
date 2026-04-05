@@ -1,30 +1,12 @@
 import random
-from collections import deque
 
+import gymnasium as gym
 import numpy as np
 import torch
 from torch import nn, optim
 from torch.nn import functional as F
 
-from rl.micro_rl import GridWorld
-
-
-class ReplayBuffer:
-    def __init__(self, capacity: int):
-        self.capacity = capacity
-        self.buffer = deque(maxlen=capacity)
-
-    def push(
-        self, *, state: int, action: int, reward: int, next_state: int, done: bool
-    ) -> None:
-        self.buffer.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size: int) -> tuple[np.ndarray, ...]:
-        batch = random.sample(list(self.buffer), batch_size)
-        return tuple(map(np.array, zip(*batch)))
-
-    def __len__(self) -> int:
-        return len(self.buffer)
+from rl.dqn.grid_world import ReplayBuffer
 
 
 class _DQNAgent:
@@ -63,16 +45,16 @@ class _DQNAgent:
         self.n_actions = n_actions
         self.n_states = n_states
 
-    def choose_action(self, state: int) -> int:
+    def choose_action(self, state: np.ndarray) -> int:
         choice = random.random()
 
         if choice < self.eps:
             return random.randint(0, self.n_actions - 1)
         else:
-            x = torch.eye(self.n_states)[state]
+            x = torch.FloatTensor(state).unsqueeze(0)
             self.online_net.eval()
             with torch.no_grad():
-                return self.online_net(x.unsqueeze(0)).argmax().item()
+                return self.online_net(x).argmax().item()
 
     def learn(self, batch: tuple[np.ndarray, ...]):
         self.online_net.train()
@@ -82,20 +64,21 @@ class _DQNAgent:
         rewards = torch.FloatTensor(_rewards)
         dones = torch.FloatTensor(_dones)
 
-        states_ohe = torch.eye(self.n_states)[states]
-        next_states_ohe = torch.eye(self.n_states)[next_states]
+        s = torch.FloatTensor(states)
+        ns = torch.FloatTensor(next_states)
 
-        predicted_q = self.online_net(states_ohe).gather(1, actions).squeeze()
+        predicted_q = self.online_net(s).gather(1, actions).squeeze()
 
         with torch.no_grad():
             target_q = rewards + self.gamma * (
-                self.target_net(next_states_ohe).max(dim=1).values * (1 - dones)
+                self.target_net(ns).max(dim=1).values * (1 - dones)
             )
 
         loss = F.mse_loss(predicted_q, target_q)
 
         self.optimizer.zero_grad()
         loss.backward()
+        nn.utils.clip_grad_norm_(self.online_net.parameters(), max_norm=10)
         self.optimizer.step()
 
     def sync_target(self) -> None:
@@ -107,19 +90,24 @@ class _DQNAgent:
 
 
 def train():
-    env = GridWorld(r=3, c=4)
-    agent = _DQNAgent()
+    env = gym.make("CartPole-v1")
+    agent = _DQNAgent(
+        n_states=4,
+        n_actions=2,
+    )
     buffer = ReplayBuffer(capacity=10_000)
     step = 0
-    wins = 0
+    rewards_history = []
 
-    for episode in range(1_000):
-        state = env.reset()
+    for episode in range(3_000):
+        state, _ = env.reset()
         done = False
+        total_reward = 0
 
         while not done:
             action = agent.choose_action(state)
-            next_state, reward, done = env.step(action)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+            done = terminated or truncated
 
             buffer.push(
                 state=state,
@@ -134,38 +122,20 @@ def train():
 
             step += 1
 
-            if step % 100 == 0:
+            if step % 1000 == 0:
                 agent.sync_target()
 
             state = next_state
-
-            if done and reward == 1:
-                wins += 1
+            total_reward += reward
 
         agent.decay_epsilon()
+        rewards_history.append(total_reward)
 
         if (episode + 1) % 100 == 0:
+            avg = np.mean(rewards_history[-100:])
             print(
-                f"Episode {episode + 1:>5} | wins last 100: {wins:>3} | eps: {agent.eps:.3f}"
+                f"Episode {episode + 1:>5} | avg reward last 100: {avg:>6.1f} | eps: {agent.eps:.3f}"
             )
-            wins = 0
-
-    # print learned policy
-    arrows = {0: "↑", 1: "→", 2: "↓", 3: "←"}
-    specials = {3: " G", 5: "XX", 7: " P"}
-    print("\nLearned policy:")
-    for s in range(12):
-        if s % 4 == 0:
-            print("  ", end="")
-        if s in specials:
-            print(f" {specials[s]} ", end="")
-        else:
-            old_eps, agent.eps = agent.eps, 0
-            a = agent.choose_action(s)
-            agent.eps = old_eps
-            print(f"  {arrows[a]} ", end="")
-        if s % 4 == 3:
-            print()
 
 
 if __name__ == "__main__":
